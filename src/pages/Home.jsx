@@ -37,7 +37,7 @@ function Home() {
         <div className="text-center font-bold mt-8">
           <h1 className="text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.15]">
             Empower Your Future with
-            <HighlightText text={"R programming"} />
+            <HighlightText text={"R-programming"} />
           </h1>
         </div>
 
