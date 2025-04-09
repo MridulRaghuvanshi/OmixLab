@@ -42,10 +42,10 @@ function Home() {
         </div>
 
         {/* Sub Heading */}
-        <div className={`-mt-3 w-[90%] max-w-[800px] text-center tex 
+        <div className={`-mt-3 w-[90%] max-w-[800px] text-center text-base md:text-lg ${isDarkMode ? "text-gray-300" : "text-gray-600"} leading-relaxed`}>
           With our comprehensive online courses, you can learn at your own pace, wherever you are. 
           Gain access to extensive resources including practical projects, engaging quizzes, and 
-          tailored feedback from seasoned educators—all designed to help you thrive in the dynamic field of Bioinformatics
+          tailored feedback from seasoned educators—all designed to help you thrive in the dynamic field of Bioinformatics.
         </div>
 
         {/* CTA Buttons */}
@@ -98,17 +98,26 @@ function Home() {
               active: false,
             }}
             codeColor={"text-[#00FFB2]"}
-            codeblock={`SELECT g.gene_name, g.chromosome, g.start_position, g.end_position, 
-                          p.protein_id, p.protein_function, d.disease_name
-                          FROM genes g
-                          LEFT JOIN proteins p ON g.gene_id = p.gene_id
-                          LEFT JOIN gene_disease gd ON g.gene_id = gd.gene_id
-                          LEFT JOIN diseases d ON gd.disease_id = d.disease_id
-                          WHERE g.organism = 'Homo sapiens' 
-                          AND g.chromosome = '17'
-                          AND g.start_position BETWEEN 40000000 AND 50000000
-                          AND g.gene_type = 'protein_coding'
-`}
+            codeblock={`# Example SQL query for gene-protein-disease relationships
+SELECT 
+    g.gene_name, 
+    g.chromosome, 
+    g.start_position, 
+    g.end_position,
+    p.protein_id, 
+    p.protein_function, 
+    d.disease_name
+FROM genes g
+LEFT JOIN proteins p 
+    ON g.gene_id = p.gene_id
+LEFT JOIN gene_disease gd 
+    ON g.gene_id = gd.gene_id
+LEFT JOIN diseases d 
+    ON gd.disease_id = d.disease_id
+WHERE g.organism = 'Homo sapiens'
+    AND g.chromosome = '17'
+    AND g.start_position BETWEEN 40000000 AND 50000000
+    AND g.gene_type = 'protein_coding';`}
             backgroundGradient={<div></div>}
           />
         </div>
@@ -137,7 +146,17 @@ function Home() {
               active: false,
             }}
             codeColor={"text-[#00FFB2]"}
-            codeblock={`import React from "react";\n import CTAButton from "./Button";\nimport TypeAnimation from "react-type";\nimport { FaArrowRight } from "react-icons/fa";\n\nconst Home = () => {\nreturn (\n<div>Home</div>\n)\n}\nexport default Home;`}
+            codeblock={`import React from "react";
+import CTAButton from "./Button";
+import TypeAnimation from "react-type";
+import { FaArrowRight } from "react-icons/fa";
+
+const Home = () => {
+  return (
+    <div>Home</div>
+  )
+}
+export default Home;`}
             backgroundGradient={<div></div>}
           />
         </div>
@@ -205,12 +224,10 @@ function Home() {
         <EducatorSection />
 
         {/* Reviews from Other Learners */}
-        <h1 className="text-center text-3xl md:text-4xl font-semibold tracking-tight mt-8">
-          Reviews from other learners
-        </h1>
         <ReviewSlider />
       </div>
 
+      {/* Footer */}
       <Footer />
     </div>
   )
