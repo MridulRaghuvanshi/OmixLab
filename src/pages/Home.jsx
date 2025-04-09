@@ -42,7 +42,7 @@ function Home() {
         </div>
 
         {/* Sub Heading */}
-        <div className={`-mt-3 w-[90%] max-w-[800px] text-center text-base md:text-lg ${isDarkMode ? "text-gray-300" : "text-gray-600"} leading-relaxed font-normal`}>
+        <div className={`-mt-3 w-[90%] max-w-[800px] text-center tex 
           With our comprehensive online courses, you can learn at your own pace, wherever you are. 
           Gain access to extensive resources including practical projects, engaging quizzes, and 
           tailored feedback from seasoned educators—all designed to help you thrive in the dynamic field of Bioinformatics
