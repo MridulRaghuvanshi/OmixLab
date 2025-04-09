@@ -98,22 +98,10 @@ function Home() {
               active: false,
             }}
             codeColor={"text-[#00FFB2]"}
-            codeblock={`# Example SQL query for gene-protein-disease relationships
-SELECT 
-    g.gene_name, 
-    g.chromosome, 
-    g.start_position, 
-    g.end_position,
-    p.protein_id, 
-    p.protein_function, 
-    d.disease_name
-FROM genes g
-LEFT JOIN proteins p 
-    ON g.gene_id = p.gene_id
-LEFT JOIN gene_disease gd 
-    ON g.gene_id = gd.gene_id
-LEFT JOIN diseases d 
-    ON gd.disease_id = d.disease_id
+            codeblock={`SELECT FROM genes g
+LEFT JOIN proteins p ON g.gene_id = p.gene_id
+LEFT JOIN gene_disease gd ON g.gene_id = gd.gene_id
+LEFT JOIN diseases d ON gd.disease_id = d.disease_id
 WHERE g.organism = 'Homo sapiens'
     AND g.chromosome = '17'
     AND g.start_position BETWEEN 40000000 AND 50000000
