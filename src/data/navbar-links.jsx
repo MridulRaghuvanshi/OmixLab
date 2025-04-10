@@ -8,6 +8,10 @@ export const NavbarLinks = [
     // path: '/catalog',
   },
   {
+    title: "Pricing",
+    path: "/pricing",
+  },
+  {
     title: "Podcasts",
     path: "/podcasts",
   },

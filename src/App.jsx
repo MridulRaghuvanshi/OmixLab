@@ -13,6 +13,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Podcasts from "./pages/Podcasts";
+import Pricing from "./pages/Pricing";
 import MyProfile from "./components/core/Dashboard/MyProfile";
 import Dashboard from "./pages/Dashboard";
 import PrivateRoute from "./components/core/Auth/PrivateRoute";
@@ -39,16 +40,17 @@ function AppContent() {
 
   return (
     <div className={`w-screen min-h-screen flex flex-col font-inter transition-colors duration-300
-      ${isDarkMode 
-        ? "bg-[#0A0F1C] text-white" 
+      ${isDarkMode
+        ? "bg-[#0A0F1C] text-white"
         : "bg-gray-50 text-gray-900"}`}>
       <div className="flex flex-col flex-1">
-        <Navbar/>
+        <Navbar />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="catalog/:catalogName" element={<Catalog />} />
           <Route path="courses/:courseId" element={<CourseDetails />} />
           <Route path="/podcasts" element={<Podcasts />} />
+          <Route path="/pricing" element={<Pricing />} />
 
           <Route
             path="signup"
