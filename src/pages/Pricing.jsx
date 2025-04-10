@@ -61,7 +61,7 @@ const Pricing = () => {
     },
     {
       title: "Advanced",
-      price: "79",
+      price: "80",
       features: [
         "All Intermediate features",
         "Expert-led workshops",
