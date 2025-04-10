@@ -13,7 +13,6 @@ import VerifyEmail from "./pages/VerifyEmail";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Podcasts from "./pages/Podcasts";
-import Pricing from "./pages/Pricing";
 import MyProfile from "./components/core/Dashboard/MyProfile";
 import Dashboard from "./pages/Dashboard";
 import PrivateRoute from "./components/core/Auth/PrivateRoute";
@@ -31,6 +30,8 @@ import CourseDetails from "./pages/CourseDetails";
 import ViewCourse from "./pages/ViewCourse";
 import VideoDetails from "./components/core/ViewCourse/VideoDetails";
 import Educator from "./components/core/Dashboard/EducatorDashboard/Educator";
+import Courses from "./pages/Courses";
+import Pricing from "./pages/Pricing";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -48,9 +49,10 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="catalog/:catalogName" element={<Catalog />} />
+          <Route path="courses" element={<Courses />} />
           <Route path="courses/:courseId" element={<CourseDetails />} />
-          <Route path="/podcasts" element={<Podcasts />} />
-          <Route path="/pricing" element={<Pricing />} />
+          <Route path="podcasts" element={<Podcasts />} />
+          <Route path="pricing" element={<Pricing />} />
 
           <Route
             path="signup"
@@ -92,8 +94,8 @@ function AppContent() {
               </OpenRoute>
             }
           />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
+          <Route path="about" element={<About />} />
+          <Route path="contact" element={<Contact />} />
 
           <Route
             element={

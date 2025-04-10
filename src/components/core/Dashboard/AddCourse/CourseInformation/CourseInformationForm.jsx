@@ -54,6 +54,7 @@ export default function CourseInformationForm() {
       setValue("courseRequirements", course.instructions)
       setValue("courseImage", course.thumbnail)
       setValue("introVideo", course.introVideo)
+      setValue("courseLevel", course.level)
     }
     getCategories()
 
@@ -73,7 +74,8 @@ export default function CourseInformationForm() {
       currentValues.courseRequirements.toString() !==
         course.instructions.toString() ||
       currentValues.courseImage !== course.thumbnail ||
-      currentValues.introVideo !== course.introVideo
+      currentValues.introVideo !== course.introVideo ||
+      currentValues.courseLevel !== course.level
     ) {
       return true
     }
@@ -127,6 +129,9 @@ export default function CourseInformationForm() {
         if (currentValues.introVideo !== course.introVideo) {
           formData.append("introVideo", data.introVideo)
         }
+        if (currentValues.courseLevel !== course.level) {
+          formData.append("level", data.courseLevel)
+        }
         // console.log("Edit Form data: ", formData)
         setLoading(true)
         const result = await editCourseDetails(formData, token)
@@ -154,6 +159,7 @@ export default function CourseInformationForm() {
     if (data.introVideo) {
       formData.append("introVideo", data.introVideo)
     }
+    formData.append("level", data.courseLevel)
     setLoading(true)
     const result = await addCourseDetails(formData, token)
     if (result) {
@@ -252,6 +258,31 @@ export default function CourseInformationForm() {
         {errors.courseCategory && (
           <span className="ml-2 text-xs tracking-wide text-pink-200">
             Course Category is required
+          </span>
+        )}
+      </div>
+      {/* Course Level */}
+      <div className="flex flex-col space-y-2">
+        <label className="text-sm text-black" htmlFor="courseLevel">
+          Course Level <sup className="text-pink-200">*</sup>
+        </label>
+        <select
+          {...register("courseLevel", { required: true })}
+          defaultValue=""
+          id="courseLevel"
+          className="form-style w-full"
+        >
+          <option value="" disabled>
+            Choose Course Level
+          </option>
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate">Intermediate</option>
+          <option value="Advanced">Advanced</option>
+          <option value="Expert">Expert</option>
+        </select>
+        {errors.courseLevel && (
+          <span className="ml-2 text-xs tracking-wide text-pink-200">
+            Course Level is required
           </span>
         )}
       </div>

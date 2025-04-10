@@ -19,6 +19,7 @@ import { fetchCourseDetails } from "../services/operations/courseDetailsAPI"
 import { buyCourse } from "../services/operations/studentFeaturesAPI"
 import GetAvgRating from "../utils/avgRating"
 import Error from "./Error"
+import { toast } from "react-hot-toast"
 
 function CourseDetails() {
   const { user } = useSelector((state) => state.profile)
@@ -105,45 +106,33 @@ function CourseDetails() {
     createdAt,
   } = response.data?.courseDetails
 
-  // const handleBuyCourse = () => {
-  //   console.log("Course being sent to buyCourse:", course);
-  //   if (token) {
-  //     buyCourse(token, [{ id: courseId }], user, navigate, dispatch)
-  //     return
-  //   }
-  //   setConfirmationModal({
-  //     text1: "You are not logged in!",
-  //     text2: "Please login to Purchase Course.",
-  //     btn1Text: "Login",
-  //     btn2Text: "Cancel",
-  //     btn1Handler: () => navigate("/login"),
-  //     btn2Handler: () => setConfirmationModal(null),
-  //   })
-  // }
   const handleBuyCourse = () => {
-    console.log("🚀 Course being sent to buyCourse:", courseId);  // Debug log
+    if (user?.accountType === "Educator") {
+      toast.error("As an educator, you cannot purchase courses. You can only create and manage courses.");
+      return;
+    }
+
+    console.log("Course being sent to buyCourse:", courseId);
 
     if (!courseId) {
-        console.error("⚠️ courseId is undefined!");
-        return toast.error("Course ID is missing.");
+      console.error("courseId is undefined!");
+      return toast.error("Course ID is missing.");
     }
 
     if (token) {
-        // Fix: Use the correct course ID format and pass price as totalAmount
-        buyCourse(token, [courseId], user, navigate, dispatch, price);
-        return;
+      buyCourse(token, [courseId], user, navigate, dispatch, price);
+      return;
     }
 
     setConfirmationModal({
-        text1: "You are not logged in!",
-        text2: "Please login to Purchase Course.",
-        btn1Text: "Login",
-        btn2Text: "Cancel",
-        btn1Handler: () => navigate("/login"),
-        btn2Handler: () => setConfirmationModal(null),
+      text1: "You are not logged in!",
+      text2: "Please login to Purchase Course.",
+      btn1Text: "Login",
+      btn2Text: "Cancel",
+      btn1Handler: () => navigate("/login"),
+      btn2Handler: () => setConfirmationModal(null),
     });
-};
-
+  };
 
   if (paymentLoading) {
     // console.log("payment loading")

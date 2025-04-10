@@ -10,8 +10,8 @@ const PricingCard = ({ title, price, features }) => {
       shadow-lg transition-all duration-300 hover:scale-105`}>
       <h3 className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{title}</h3>
       <div className="mb-6">
-        <span className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${price}</span>
-        <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>/month</span>
+        <span className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>₹{price}</span>
+        <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>/year</span>
       </div>
       <ul className="space-y-3 mb-6">
         {features.map((feature, index) => (
@@ -40,46 +40,48 @@ const Pricing = () => {
   const plans = [
     {
       title: "Beginner",
-      price: "29",
+      price: "499",
       features: [
         "Access to basic courses",
         "Community forum access",
         "Basic progress tracking",
-        "Email support"
+        "Email support",
+        "Course Certificate Included"
       ]
     },
     {
       title: "Intermediate",
-      price: "49",
+      price: "999",
       features: [
         "All Beginner features",
         "Advanced course access",
         "Practice exercises",
         "Priority email support",
-        "Course certificates"
+        "Course Certificate Included"
       ]
     },
     {
       title: "Advanced",
-      price: "79",
+      price: "1499",
       features: [
         "All Intermediate features",
         "Expert-led workshops",
         "Live Q&A sessions",
         "Personalized learning path",
-        "1-on-1 mentoring sessions"
+        "1-on-1 mentoring sessions",
+        "Course Certificate Included"
       ]
     },
     {
       title: "Expert",
-      price: "149",
+      price: "2499",
       features: [
         "All Advanced features",
         "Industry projects",
         "Career guidance",
         "Job placement assistance",
         "Lifetime course access",
-        "Private coaching"
+        "Course Certificate Included"
       ]
     }
   ];

@@ -56,6 +56,11 @@ const coursesSchema = new mongoose.Schema({
 		type: String,
 		enum: ["Draft", "Published"],
 	},
+	level: {
+		type: String,
+		enum: ["Beginner", "Intermediate", "Advanced", "Expert"],
+		required: true,
+	},
 	createdAt: {
 		type:Date,
 		default:Date.now

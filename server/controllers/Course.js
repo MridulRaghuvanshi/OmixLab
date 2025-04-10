@@ -21,6 +21,7 @@ exports.createCourse = async (req, res) => {
       tag: _tag,
       category,
       status,
+      level,
       instructions: _instructions,
     } = req.body
     // Get thumbnail image from request files
@@ -44,6 +45,7 @@ exports.createCourse = async (req, res) => {
       !tag.length ||
       !thumbnail ||
       !category ||
+      !level ||
       !instructions.length
     ) {
       return res.status(400).json({
@@ -93,6 +95,7 @@ exports.createCourse = async (req, res) => {
       thumbnail: thumbnailImage.secure_url,
       status: status,
       instructions,
+      level,
     }
     
     // Upload intro video if it exists
@@ -239,9 +242,12 @@ exports.getAllCourses = async (req, res) => {
         Educator: true,
         ratingAndReviews: true,
         studentsEnrolled: true,
+        level: true,
+        category: true,
       }
     )
       .populate("Educator")
+      .populate("category", "name")
       .exec()
 
     return res.status(200).json({

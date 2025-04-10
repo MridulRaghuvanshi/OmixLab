@@ -61,60 +61,17 @@ function Navbar() {
           <ul className="flex gap-x-8">
             {NavbarLinks.map((link, index) => (
               <li key={index}>
-                {link.title === "Catalog" ? (
-                  <>
-                    <div
-                      className={`group relative flex cursor-pointer items-center gap-1 ${
-                        matchRoute("/catalog/:catalogName")
-                          ? "text-[#00FFB2]"
-                          : isDarkMode ? "text-white hover:text-[#00FFB2]" : "text-gray-900 hover:text-[#00FFB2]"
-                      } transition duration-300`}
-                    >
-                      <p>{link.title}</p>
-                      <BsChevronDown className="text-sm" />
-
-                      {/* Dropdown */}
-                      <div className={`absolute left-[50%] top-[100%] z-[1000] flex w-[220px] flex-col rounded-xl border backdrop-blur-md p-4 transition-all duration-300 lg:w-[300px] opacity-0 scale-95 transform translate-x-[-50%] translate-y-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0
-                        ${isDarkMode 
-                          ? "bg-[#0A0F1C]/95 border-white/5" 
-                          : "bg-white/95 border-gray-200"}`}>
-                        {loading ? (
-                          <p className="text-center">Loading...</p>
-                        ) : subLinks?.length > 0 ? (
-                          subLinks
-                            .filter((subLink) => subLink?.courses?.length > 0)
-                            .map((subLink, i) => (
-                              <Link
-                                to={`/catalog/${subLink.name.split(" ").join("-").toLowerCase()}`}
-                                className={`rounded-lg px-3 py-2 ${
-                                  isDarkMode 
-                                    ? "text-white hover:bg-white/5" 
-                                    : "text-gray-900 hover:bg-gray-100"
-                                } hover:text-[#00FFB2] transition duration-300`}
-                                key={i}
-                              >
-                                <p>{subLink.name}</p>
-                              </Link>
-                            ))
-                        ) : (
-                          <p className="text-center">No Courses Found</p>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <Link to={link?.path}>
-                    <p
-                      className={`${
-                        matchRoute(link?.path)
-                          ? "text-[#00FFB2]"
-                          : isDarkMode ? "text-white hover:text-[#00FFB2]" : "text-gray-900 hover:text-[#00FFB2]"
-                      } transition duration-300`}
-                    >
-                      {link.title}
-                    </p>
-                  </Link>
-                )}
+                <Link to={link?.path}>
+                  <p
+                    className={`${
+                      matchRoute(link?.path)
+                        ? "text-[#00FFB2]"
+                        : isDarkMode ? "text-white hover:text-[#00FFB2]" : "text-gray-900 hover:text-[#00FFB2]"
+                    } transition duration-300`}
+                  >
+                    {link.title}
+                  </p>
+                </Link>
               </li>
             ))}
           </ul>
