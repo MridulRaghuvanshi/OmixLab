@@ -12,6 +12,8 @@ import UpdatePassword from "./pages/UpdatePassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import Podcasts from "./pages/Podcasts";
+import Pricing from "./pages/Pricing";
 import MyProfile from "./components/core/Dashboard/MyProfile";
 import Dashboard from "./pages/Dashboard";
 import PrivateRoute from "./components/core/Auth/PrivateRoute";
@@ -47,6 +49,8 @@ function AppContent() {
           <Route path="/" element={<Home />} />
           <Route path="catalog/:catalogName" element={<Catalog />} />
           <Route path="courses/:courseId" element={<CourseDetails />} />
+          <Route path="/podcasts" element={<Podcasts />} />
+          <Route path="/pricing" element={<Pricing />} />
 
           <Route
             path="signup"
