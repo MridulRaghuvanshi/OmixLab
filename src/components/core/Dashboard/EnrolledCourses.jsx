@@ -1,92 +1,134 @@
 import { useEffect, useState } from "react"
-import ProgressBar from "@ramonak/react-progress-bar"
-import { BiDotsVerticalRounded } from "react-icons/bi"
 import { useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
-
-import { getUserEnrolledCourses } from "../../../services/operations/profileAPI"
+import { useTheme } from "../../../context/ThemeContext"
+import { apiConnector } from "../../../services/apiconnector"
+import { courseEndpoints } from "../../../services/apis"
 
 export default function EnrolledCourses() {
+  const { isDarkMode } = useTheme()
   const { token } = useSelector((state) => state.auth)
   const navigate = useNavigate()
+  const [enrolledCourses, setEnrolledCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const { user } = useSelector((state) => state.profile)
 
-  const [enrolledCourses, setEnrolledCourses] = useState(null)
-  const getEnrolledCourses = async () => {
-    try {
-      const res = await getUserEnrolledCourses(token);
-
-      setEnrolledCourses(res);
-    } catch (error) {
-      console.log("Could not fetch enrolled courses.")
-    }
-  };
   useEffect(() => {
-    getEnrolledCourses();
-  }, [])
+    const fetchEnrolledCourses = async () => {
+      try {
+        const response = await apiConnector(
+          "GET",
+          courseEndpoints.GET_ALL_COURSE_API,
+          null,
+          {
+            Authorization: `Bearer ${token}`,
+          }
+        )
+
+        if (response.data.success) {
+          setEnrolledCourses(response.data.data)
+        }
+      } catch (error) {
+        console.log("Could not fetch enrolled courses.")
+      }
+      setLoading(false)
+    }
+
+    fetchEnrolledCourses()
+  }, [token])
+
+  if (loading) {
+    return (
+      <div className="grid min-h-[calc(100vh-3.5rem)] place-items-center">
+        <div className="spinner"></div>
+      </div>
+    )
+  }
 
   return (
     <>
-      <div className="text-3xl text-[rgb(239,246,255)]">Enrolled Courses</div>
-      {!enrolledCourses ? (
-        <div className="grid min-h-[calc(100vh-3.5rem)] place-items-center">
-          <div className="spinner"></div>
-        </div>
-      ) : !enrolledCourses.length ? (
-        <p className="grid h-[10vh] w-full place-content-center text-[rgb(244,244,245)]">
-          You have not enrolled in any course yet.
-          {/* TODO: Modify this Empty State */}
-        </p>
-      ) : (
-        <div className="my-8 text-black">
-          {/* Headings */}
-          <div className="flex rounded-t-lg bg-gray-800 ">
-            <p className="w-[45%] px-5 py-3">Course Name</p>
-            <p className="w-1/4 px-2 py-3">Duration</p>
-            <p className="flex-1 px-2 py-3">Progress</p>
-          </div>
-          {/* Course Names */}
-          {enrolledCourses.map((course, i, arr) => (
-            <div
-              className={`flex items-center border border-black ${
-                i === arr.length - 1 ? "rounded-b-lg" : "rounded-none"
-              }`}
-              key={i}
-            >
-              <div
-                className="flex w-[45%] cursor-pointer items-center gap-4 px-5 py-3"
-                onClick={() => {
-                  navigate(
-                    `/view-course/${course?._id}/section/${course.courseContent?.[0]?._id}/sub-section/${course.courseContent?.[0]?.subSection?.[0]?._id}`
-                  )
-                }}
-              >
-                <img
-                  src={course.thumbnail}
-                  alt="course_img"
-                  className="h-14 w-14 rounded-lg object-cover"
-                />
-                <div className="flex max-w-xs flex-col gap-2">
-                  <p className="font-semibold">{course.courseName}</p>
-                  <p className="text-xs text-black">
-                    {course.courseDescription.length > 50
-                      ? `${course.courseDescription.slice(0, 50)}...`
-                      : course.courseDescription}
-                  </p>
-                </div>
+      <div className="text-3xl text-white mb-8">
+        <h1 className="mb-14 text-3xl font-medium text-white">My Courses</h1>
+        {user?.subscription && (
+          <div className={`mb-8 rounded-lg p-6 ${
+            isDarkMode ? "bg-[#1C1F2E]" : "bg-white"
+          }`}>
+            <h2 className={`text-xl font-semibold mb-4 ${
+              isDarkMode ? "text-white" : "text-gray-900"
+            }`}>
+              Current Subscription
+            </h2>
+            <div className={`grid grid-cols-2 gap-4 ${
+              isDarkMode ? "text-gray-300" : "text-gray-600"
+            }`}>
+              <div>
+                <p className="font-medium">Plan:</p>
+                <p className="text-[#00FFB2] font-semibold">{user.subscription.planName}</p>
               </div>
-              <div className="w-1/4 px-2 py-3">{course?.totalDuration}</div>
-              <div className="flex w-1/5 flex-col gap-2 px-2 py-3">
-                <p>Progress: {course.progressPercentage || 0}%</p>
-                <ProgressBar
-                  completed={course.progressPercentage || 0}
-                  height="8px"
-                  isLabelVisible={false}
-                />
+              <div>
+                <p className="font-medium">Level:</p>
+                <p className="text-[#00FFB2] font-semibold">{user.subscriptionLevel}</p>
               </div>
             </div>
-          ))}
+          </div>
+        )}
+        
+        <div className="my-8">
+          <h2 className={`text-xl font-semibold mb-4 ${
+            isDarkMode ? "text-white" : "text-gray-900"
+          }`}>
+            Available Courses
+          </h2>
+          {enrolledCourses.length === 0 ? (
+            <p className={`text-lg ${
+              isDarkMode ? "text-gray-400" : "text-gray-600"
+            }`}>
+              {user?.subscription 
+                ? "No courses available for your subscription level yet."
+                : "Subscribe to a plan to access courses."}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {enrolledCourses.map((course) => (
+                <div
+                  key={course._id}
+                  className={`cursor-pointer rounded-lg p-4 ${
+                    isDarkMode ? "bg-[#1C1F2E]" : "bg-white"
+                  }`}
+                  onClick={() => {
+                    navigate(`/view-course/${course._id}/section/${course.courseContent?.[0]?._id}/sub-section/${course.courseContent?.[0]?.subSection?.[0]?._id}`)
+                  }}
+                >
+                  <img
+                    src={course.thumbnail}
+                    alt={course.courseName}
+                    className="h-[200px] w-full rounded-lg object-cover"
+                  />
+                  <div className="mt-4">
+                    <p className={`text-lg font-semibold ${
+                      isDarkMode ? "text-white" : "text-gray-900"
+                    }`}>
+                      {course.courseName}
+                    </p>
+                    <p className={`mt-2 ${
+                      isDarkMode ? "text-gray-400" : "text-gray-600"
+                    }`}>
+                      {course.courseDescription}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className={`px-2 py-1 text-sm rounded-full ${
+                        isDarkMode ? "bg-[#00FFB2]/10 text-[#00FFB2]" : "bg-[#00FFB2]/20 text-[#008C62]"
+                      }`}>
+                        {course.level}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </>
   )
 }

@@ -26,6 +26,12 @@ export default function MyProfile() {
               {user?.firstName + " " + user?.lastName}
             </p>
             <p className="text-sm text-[rgb(153,153,153)]">{user?.email}</p>
+            {user?.subscriptionLevel && (
+              <p className="text-sm mt-1">
+                <span className="text-[#00FFB2]">Active Plan: </span>
+                <span className="text-[rgb(235,235,235)]">{user?.subscriptionLevel}</span>
+              </p>
+            )}
           </div>
         </div>
         <IconBtn

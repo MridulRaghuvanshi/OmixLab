@@ -68,6 +68,14 @@ const userSchema = new mongoose.Schema(
 				ref: "courseProgress",
 			},
 		],
+		subscription: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Subscription",
+		},
+		subscriptionLevel: {
+			type: String,
+			enum: ["Beginner", "Intermediate", "Advanced", "Expert"],
+		},
 
 		// Add timestamps for when the document is created and last modified
 	},

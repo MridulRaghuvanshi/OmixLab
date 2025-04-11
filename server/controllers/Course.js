@@ -388,11 +388,10 @@ exports.getCourseDetails = async (req, res) => {
       .populate("category")
       .populate("ratingAndReviews")
       .populate({
-        path: "courseContent", // ✅ First populate `courseContent` (Section)
+        path: "courseContent",
         populate: {
-          path: "subSection",  // ✅ Then populate `subSection` inside `Section`
+          path: "subSection",
           model: "SubSection",
-          select: "-videoUrl",
         },
       })
       .exec();

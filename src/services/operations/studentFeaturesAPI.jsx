@@ -11,12 +11,15 @@ const { COURSE_DETAILS_API } = courseEndpoints;
 // Function to load the Razorpay script
 function loadScript(src) {
   return new Promise((resolve) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve(true);
+      return;
+    }
     const script = document.createElement("script");
     script.src = src;
-    script.onload = () => {
-      resolve(true);
-    };
+    script.onload = () => resolve(true);
     script.onerror = () => {
+      script.remove();
       resolve(false);
     };
     document.body.appendChild(script);
@@ -29,6 +32,7 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch,
   dispatch(setPaymentLoading(true));
 
   try {
+    // Load Razorpay script
     const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
     if (!res) {
       toast.error("Razorpay SDK failed to load");
@@ -40,18 +44,15 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch,
       return;
     }
 
-    // Extract course IDs - handle both formats (object with id property or direct ID)
+    // Extract course IDs
     const courseIds = courses.map(course => {
       if (typeof course === 'object' && course !== null) {
-        // If it's an object with id or _id property
         return course.id || course._id;
       }
-      // If it's already a string ID
       return course;
     });
     
-    // If totalAmount is not provided, use the first course's price
-    // This handles the case from a single course page
+    // Get course price if not provided
     let amount = totalAmount;
     if (!amount && courseIds.length === 1) {
       try {
@@ -61,7 +62,6 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch,
           null, 
           { Authorization: `Bearer ${token}` }
         );
-        console.log("Course details response:", singleCourseResponse.data);
         
         if (singleCourseResponse.data.success) {
           amount = singleCourseResponse.data.data.courseDetails.price;
@@ -78,7 +78,7 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch,
     
     console.log("Initiating payment for courses:", courseIds, "Total amount:", amount);
 
-    // Send course IDs array and total amount to backend
+    // Create order
     const orderResponse = await apiConnector("POST", COURSE_PAYMENT_API, {
       courses: courseIds,
       amount: amount,
@@ -97,9 +97,10 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch,
     // Prepare course names for description
     const courseNames = courses.map(course => course.courseName || "Course").join(", ");
 
+    // Initialize Razorpay options
     const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID || import.meta.env.REACT_APP_RAZORPAY_KEY_ID,
-      amount: Math.round(amount * 100), // Convert to paise and ensure it's a whole number
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_hKQBqNbBT98Kkw", // Fallback to test key
+      amount: orderResponse.data.amount, // Use the amount from the order response
       currency,
       name: "OmixLab",
       description: courseNames.length > 30 
@@ -107,11 +108,21 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch,
         : `Purchase: ${courseNames}`,
       image: logo,
       order_id: orderId,
+      prefill: {
+        name: `${userDetails.firstName} ${userDetails.lastName || ""}`.trim(),
+        email: userDetails.email,
+        contact: userDetails.contactNumber || "",
+      },
+      notes: {
+        courseIds: JSON.stringify(courseIds),
+      },
+      theme: {
+        color: "#00FFB2",
+      },
       handler: async function(response) {
         try {
           console.log("Payment successful, verifying...", response);
           
-          // Verify payment with all course IDs
           const verificationResponse = await apiConnector("POST", COURSE_VERIFY_API, {
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_order_id: response.razorpay_order_id,
@@ -121,8 +132,6 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch,
           }, {
             Authorization: `Bearer ${token}`,
           });
-
-          console.log("Verification response:", verificationResponse.data);
 
           if (!verificationResponse.data.success) {
             throw new Error(verificationResponse.data.message || "Payment verification failed");
@@ -145,27 +154,19 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch,
           console.error("Payment verification failed:", error);
           toast.error(error.message || "Payment verification failed. Please contact support.");
         }
-      },
-      prefill: {
-        name: `${userDetails.firstName} ${userDetails.lastName || ""}`.trim(),
-        email: userDetails.email,
-        contact: userDetails.contactNumber || "",
-      },
-      notes: {
-        courseIds: JSON.stringify(courseIds),
-      },
-      theme: {
-        color: "#F37254",
-      },
+      }
     };
 
+    // Create Razorpay instance
     const paymentObject = new window.Razorpay(options);
-    paymentObject.open();
-
+    
+    // Handle payment failures
     paymentObject.on("payment.failed", function(response) {
-      console.error("Payment failed:", response.error);
       toast.error(`Payment failed: ${response.error.description}`);
     });
+
+    // Open Razorpay
+    paymentObject.open();
 
   } catch (error) {
     console.error("BUY_COURSE_API ERROR:", error);

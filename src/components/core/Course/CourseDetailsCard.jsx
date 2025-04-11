@@ -4,13 +4,13 @@ import { toast } from "react-hot-toast"
 import { BsFillCaretRightFill } from "react-icons/bs"
 import { FaShareSquare } from "react-icons/fa"
 import { useDispatch, useSelector } from "react-redux"
-import { useNavigate } from "react-router-dom"
-
-import { addToCart } from "../../../slices/cartSlice"
+import { useNavigate, Link } from "react-router-dom"
+import { useTheme } from "../../../context/ThemeContext"
 import { ACCOUNT_TYPE } from "../../../utils/constants"
-
+import { addToCart } from "../../../slices/cartSlice"
 
 function CourseDetailsCard({ course, setConfirmationModal, handleBuyCourse }) {
+  const { isDarkMode } = useTheme()
   const { user } = useSelector((state) => state.profile)
   const { token } = useSelector((state) => state.auth)
   const navigate = useNavigate()
@@ -28,8 +28,8 @@ function CourseDetailsCard({ course, setConfirmationModal, handleBuyCourse }) {
   }
 
   const handleAddToCart = () => {
-    if (user && user?.accountType === ACCOUNT_TYPE.Educator) {
-      toast.error("You are an Educator. You can't buy a course.")
+    if (user && user?.accountType === ACCOUNT_TYPE.INSTRUCTOR) {
+      toast.error("You are an Instructor. You can't buy a course.")
       return
     }
     if (token) {
@@ -51,7 +51,9 @@ function CourseDetailsCard({ course, setConfirmationModal, handleBuyCourse }) {
   return (
     <>
       <div
-        className={`flex flex-col gap-4 rounded-md bg-[rgb(28,28,28)] p-4 text-[rgb(245,245,245)]`}
+        className={`flex flex-col gap-4 rounded-md p-4 ${
+          isDarkMode ? "bg-[#1C1F2E]" : "bg-white"
+        }`}
       >
         {/* Course Image */}
         <img
@@ -62,54 +64,89 @@ function CourseDetailsCard({ course, setConfirmationModal, handleBuyCourse }) {
 
         <div className="px-4">
           <div className="space-x-3 pb-4 text-3xl font-semibold">
-            Rs. {CurrentPrice}
+            <span className="text-[#00FFB2]">₹ {CurrentPrice}</span>
           </div>
           <div className="flex flex-col gap-4">
-            <button
-              className="yellowButton"
-              onClick={
-                user && course?.studentsEnrolled.includes(user?._id)
-                  ? () => navigate("/dashboard/enrolled-courses")
-                  : handleBuyCourse
-              }
-            >
-              {user && course?.studentsEnrolled.includes(user?._id)
-                ? "Go To Course"
-                : "Buy Now"}
-            </button>
-            {(!user || !course?.studentsEnrolled.includes(user?._id)) && (
-              <button onClick={handleAddToCart} className="blackButton">
-                Add to Cart
+            {/* Buy Plan Button */}
+            <Link to="/pricing" className="w-full">
+              <button
+                className="w-full rounded-md bg-[#00FFB2] px-6 py-3 text-center text-[#0A0F1C] font-semibold hover:bg-[#00FFB2]/90"
+              >
+                Buy Plan
               </button>
-            )}
+            </Link>
+            <p className={`text-center text-sm ${
+              isDarkMode ? "text-[#00FFB2]" : "text-[#008C62]"
+            }`}>
+              Save up to 70% with our subscription plans!
+            </p>
+
+            {/* Buy Now Button */}
+            <button
+              onClick={handleBuyCourse}
+              className={`w-full rounded-md border px-6 py-3 text-center font-semibold ${
+                isDarkMode
+                  ? "border-white/10 text-white hover:bg-white/5"
+                  : "border-gray-300 text-gray-900 hover:bg-gray-100"
+              }`}
+            >
+              Buy Now
+            </button>
+
+            {/* Add to Cart Button */}
+            <button
+              onClick={handleAddToCart}
+              className={`w-full rounded-md border px-6 py-3 text-center font-semibold ${
+                isDarkMode
+                  ? "border-white/10 text-white hover:bg-white/5"
+                  : "border-gray-300 text-gray-900 hover:bg-gray-100"
+              }`}
+            >
+              Add to Cart
+            </button>
           </div>
           <div>
-            <p className="pb-3 pt-6 text-center text-sm text-[rgb(238,238,238)]">
+            <p className="pb-3 pt-6 text-center text-sm text-richblack-25">
               30-Day Money-Back Guarantee
             </p>
           </div>
 
-          <div className={``}>
-            <p className={`my-2 text-xl font-semibold `}>
-              This Course Includes :
-            </p>
-            <div className="flex flex-col gap-3 text-sm text-caribbeangreen-100">
-              {course?.instructions?.map((item, i) => {
-                return (
-                  <p className={`flex gap-2`} key={i}>
-                    <BsFillCaretRightFill />
-                    <span>{item}</span>
-                  </p>
-                )
-              })}
+          <div className={`flex flex-col gap-3 text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+            <p className="text-xl font-semibold">This Course Includes:</p>
+            <div className="flex gap-2">
+              <span>
+                <i className="fas fa-video"></i>
+              </span>
+              <span>8 hours on-demand video</span>
+            </div>
+            <div className="flex gap-2">
+              <span>
+                <i className="fas fa-file"></i>
+              </span>
+              <span>Full Lifetime access</span>
+            </div>
+            <div className="flex gap-2">
+              <span>
+                <i className="fas fa-mobile-alt"></i>
+              </span>
+              <span>Access on Mobile and TV</span>
+            </div>
+            <div className="flex gap-2">
+              <span>
+                <i className="fas fa-certificate"></i>
+              </span>
+              <span>Certificate of completion</span>
             </div>
           </div>
           <div className="text-center">
             <button
-              className="mx-auto flex items-center gap-2 py-6 text-yellow-100 "
+              className={`mx-auto flex items-center gap-2 py-6 text-[#00FFB2] ${
+                isDarkMode ? "hover:text-[#00FFB2]/90" : "hover:text-[#00FFB2]/90"
+              }`}
               onClick={handleShare}
             >
-              <FaShareSquare size={15} /> Share
+              <i className="fas fa-share"></i>
+              <span>Share</span>
             </button>
           </div>
         </div>

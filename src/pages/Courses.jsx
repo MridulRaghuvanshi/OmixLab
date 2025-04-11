@@ -10,6 +10,8 @@ import { useSelector } from 'react-redux';
 const Courses = () => {
   const { isDarkMode } = useTheme();
   const { loading } = useSelector((state) => state.profile);
+  const { token } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.profile);
   const [courses, setCourses] = useState([]);
   const [allCourses, setAllCourses] = useState([]);
   const [activeCategory, setActiveCategory] = useState('all');
@@ -26,6 +28,19 @@ const Courses = () => {
     { id: 'advanced', name: 'Advanced' },
     { id: 'expert', name: 'Expert' },
   ];
+
+  const hasAccessToLevel = (courseLevel) => {
+    if (!user?.subscription?.level) return false;
+    
+    const levels = {
+      "Beginner": ["Beginner"],
+      "Intermediate": ["Beginner", "Intermediate"],
+      "Advanced": ["Beginner", "Intermediate", "Advanced"],
+      "Expert": ["Beginner", "Intermediate", "Advanced", "Expert"]
+    };
+
+    return levels[user.subscription.level]?.includes(courseLevel) || false;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,14 +71,14 @@ const Courses = () => {
             category: course.category
           })));
           setAllCourses(coursesData);
-          setCourses(coursesData);
+          setCourses(coursesData.filter(course => hasAccessToLevel(course.level)));
         }
       } catch (error) {
         console.log('Error fetching data:', error);
       }
     };
     fetchData();
-  }, []);
+  }, [user?.subscription?.level]);
 
   useEffect(() => {
     filterCourses(activeCategory, selectedLevel);
