@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { FaPlay } from 'react-icons/fa';
@@ -93,20 +92,43 @@ const Podcasts = () => {
 
   const checkPodcastAccess = () => {
     if (!user) {
+      console.log("No user found");
       return false;
     }
     
-    // Check subscription level first (simpler check)
-    if (user?.subscriptionLevel === "Podcast" || user?.subscriptionLevel === "Premium") {
-      return true;
+    // Add detailed logging
+    console.log("Full user object:", user);
+    
+    // Check if user has an active subscription
+    if (user?.subscription?.status === "active") {
+      console.log("Found active subscription");
+      // Check for Podcast Plan or Premium Plan
+      if (user?.subscription?.planName === "Podcast Plan" || 
+          user?.subscription?.planName === "Premium Plan") {
+        console.log("Valid podcast plan found");
+        return true;
+      }
+      console.log("Active subscription but not a podcast plan:", user?.subscription?.planName);
+    } else {
+      console.log("No active subscription found");
     }
 
-    // Then check subscription object if level check failed
-    if (user?.subscription?.status === "active" && 
-        (user?.subscription?.planName === "Podcast Plan" || 
-         user?.subscription?.planName === "Premium Plan")) {
+    // Check subscription level as fallback
+    if (user?.subscriptionLevel === "Podcast" || 
+        user?.subscriptionLevel === "Premium") {
+      console.log("Valid subscription level found:", user?.subscriptionLevel);
       return true;
     }
+    console.log("No valid subscription level found");
+
+    // Add debug logging
+    console.log("Subscription status:", {
+      subscriptionStatus: user?.subscription?.status,
+      planName: user?.subscription?.planName,
+      subscriptionLevel: user?.subscriptionLevel,
+      subscriptionStartDate: user?.subscription?.startDate,
+      subscriptionEndDate: user?.subscription?.endDate
+    });
 
     return false;
   };
@@ -140,15 +162,6 @@ const Podcasts = () => {
       showSubscriptionPrompt();
     }
   };
-=======
-import React from 'react';
-import { useTheme } from '../context/ThemeContext';
-import { FaPlay } from 'react-icons/fa';
-import { BsStars } from 'react-icons/bs';
-
-const Podcasts = () => {
-  const { isDarkMode } = useTheme();
->>>>>>> e193c35528bdafce83dfe8f519c06b6d5d5e8a4a
 
   const latestPodcasts = [
     {
@@ -178,7 +191,6 @@ const Podcasts = () => {
     image: "/assets/Images/podcast-thumb.webp"
   });
 
-<<<<<<< HEAD
   // Show loading state
   if (isLoading) {
     return (
@@ -191,8 +203,6 @@ const Podcasts = () => {
     );
   }
 
-=======
->>>>>>> e193c35528bdafce83dfe8f519c06b6d5d5e8a4a
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F1624]' : 'bg-white'}`}>
       {/* Hero Section */}
@@ -214,7 +224,6 @@ const Podcasts = () => {
               Learn from experts and stay updated with the latest developments.
             </p>
             <div className="flex items-center gap-4">
-<<<<<<< HEAD
               <button 
                 onClick={handlePodcastPlanClick}
                 className="bg-[#00FFB2] hover:bg-[#00FFB2]/90 text-gray-900 px-6 py-3 rounded-full font-medium transition-all">
@@ -223,12 +232,6 @@ const Podcasts = () => {
               <button 
                 onClick={handleLatestEpisode}
                 className={`flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-800'} hover:text-[#00FFB2] transition-colors`}>
-=======
-              <button className="bg-[#00FFB2] hover:bg-[#00FFB2]/90 text-gray-900 px-6 py-3 rounded-full font-medium transition-all">
-                Start Listening
-              </button>
-              <button className={`flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-800'} hover:text-[#00FFB2] transition-colors`}>
->>>>>>> e193c35528bdafce83dfe8f519c06b6d5d5e8a4a
                 <FaPlay /> Latest Episode
               </button>
             </div>
@@ -265,13 +268,9 @@ const Podcasts = () => {
                   <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     {podcast.description}
                   </p>
-<<<<<<< HEAD
                   <button 
                     onClick={handlePlayPodcast}
                     className="mt-4 flex items-center gap-2 text-[#00FFB2] hover:text-[#00FFB2]/80 transition-colors">
-=======
-                  <button className="mt-4 flex items-center gap-2 text-[#00FFB2] hover:text-[#00FFB2]/80 transition-colors">
->>>>>>> e193c35528bdafce83dfe8f519c06b6d5d5e8a4a
                     <FaPlay size={12} /> Play now
                   </button>
                 </div>
@@ -300,13 +299,9 @@ const Podcasts = () => {
                   <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                     {podcast.title}
                   </h3>
-<<<<<<< HEAD
                   <button 
                     onClick={handlePlayPodcast}
                     className="mt-4 flex items-center gap-2 text-[#00FFB2] hover:text-[#00FFB2]/80 transition-colors">
-=======
-                  <button className="mt-4 flex items-center gap-2 text-[#00FFB2] hover:text-[#00FFB2]/80 transition-colors">
->>>>>>> e193c35528bdafce83dfe8f519c06b6d5d5e8a4a
                     <FaPlay size={12} /> Play now
                   </button>
                 </div>

@@ -10,14 +10,27 @@ exports.capturePayment = async (req, res) => {
   try {
     const { courses, amount } = req.body;
 
-    if (!courses || !Array.isArray(courses) || courses.length === 0 || !amount) {
+    // Validate input
+    if (!courses || !Array.isArray(courses) || courses.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Please provide valid courses and amount",
+        message: "Please provide valid courses",
+      });
+    }
+
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid amount",
       });
     }
 
     const userId = req.user.id;
+
+    // Validate Razorpay instance
+    if (!instance) {
+      throw new Error("Razorpay instance not initialized");
+    }
 
     const options = {
       amount: Math.round(amount * 100), // Convert to paise
@@ -29,7 +42,12 @@ exports.capturePayment = async (req, res) => {
       },
     };
 
+    // Create order
     const order = await instance.orders.create(options);
+
+    if (!order || !order.id) {
+      throw new Error("Failed to create Razorpay order");
+    }
 
     return res.status(200).json({
       success: true,
@@ -55,7 +73,8 @@ exports.verifyPayment = async (req, res) => {
       razorpay_order_id,
       razorpay_signature,
       courses,
-      amount
+      amount,
+      type // Add type parameter to distinguish podcast subscriptions
     } = req.body;
 
     // Validate required fields
@@ -91,6 +110,40 @@ exports.verifyPayment = async (req, res) => {
     }
 
     const userId = req.user.id;
+
+    // Handle podcast subscription
+    if (type === "podcast") {
+      try {
+        const startDate = new Date();
+        const endDate = new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year from now
+
+        const updatedUser = await User.findByIdAndUpdate(
+          userId,
+          {
+            $set: {
+              'subscription.status': 'active',
+              'subscription.planName': 'Podcast Plan',
+              'subscription.startDate': startDate,
+              'subscription.endDate': endDate,
+              'subscriptionLevel': 'Podcast'
+            }
+          },
+          { new: true }
+        );
+
+        if (!updatedUser) {
+          throw new Error("Failed to update user subscription");
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: "Podcast subscription activated successfully"
+        });
+      } catch (error) {
+        console.error("Error updating subscription:", error);
+        throw new Error("Failed to update subscription: " + error.message);
+      }
+    }
 
     // Handle course enrollment if courses are provided
     if (courses && courses.length > 0) {

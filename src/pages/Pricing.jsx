@@ -380,15 +380,11 @@ const Pricing = () => {
             Unlock your potential with our flexible pricing plans
           </p>
         </div>
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto mb-16">
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
-
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto mb-16">
           {plans.map((plan, index) => (
             <PricingCard key={index} {...plan} />
           ))}
         </div>
-
 
         {/* Podcast Plan Section */}
         <div id="podcast-plan-section" className="max-w-7xl mx-auto mt-20">
@@ -422,7 +418,7 @@ const Pricing = () => {
                   "Free resources",
                   "Early access to podcast episodes",
                   "10–15% discount on courses",
-                  "Access to community group",
+                  "Access to community groups",
                   "Podcast attendee badge",
                   "Workshop alumni access"
                 ].map((feature, index) => (
@@ -446,10 +442,9 @@ const Pricing = () => {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
 };
 
-export default Pricing;
+export default Pricing
