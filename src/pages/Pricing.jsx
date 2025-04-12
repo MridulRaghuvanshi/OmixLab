@@ -188,6 +188,7 @@ const PricingCard = ({ title, price, features, level }) => {
 
 const Pricing = () => {
   const { isDarkMode } = useTheme();
+
   const { token } = useSelector((state) => state.auth);
   const { user } = useSelector((state) => state.profile);
   const navigate = useNavigate();
@@ -314,7 +315,7 @@ const Pricing = () => {
       toast.dismiss(toastId);
     }
   };
-
+  
   const plans = [
     {
       title: "Beginner",
@@ -379,11 +380,15 @@ const Pricing = () => {
             Unlock your potential with our flexible pricing plans
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto mb-16">
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto mb-16">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+
           {plans.map((plan, index) => (
             <PricingCard key={index} {...plan} />
           ))}
         </div>
+
 
         {/* Podcast Plan Section */}
         <div id="podcast-plan-section" className="max-w-7xl mx-auto mt-20">
@@ -441,6 +446,7 @@ const Pricing = () => {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

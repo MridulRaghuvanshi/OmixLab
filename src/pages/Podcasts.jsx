@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { FaPlay } from 'react-icons/fa';
@@ -139,6 +140,15 @@ const Podcasts = () => {
       showSubscriptionPrompt();
     }
   };
+=======
+import React from 'react';
+import { useTheme } from '../context/ThemeContext';
+import { FaPlay } from 'react-icons/fa';
+import { BsStars } from 'react-icons/bs';
+
+const Podcasts = () => {
+  const { isDarkMode } = useTheme();
+>>>>>>> e193c35528bdafce83dfe8f519c06b6d5d5e8a4a
 
   const latestPodcasts = [
     {
@@ -168,6 +178,7 @@ const Podcasts = () => {
     image: "/assets/Images/podcast-thumb.webp"
   });
 
+<<<<<<< HEAD
   // Show loading state
   if (isLoading) {
     return (
@@ -180,6 +191,8 @@ const Podcasts = () => {
     );
   }
 
+=======
+>>>>>>> e193c35528bdafce83dfe8f519c06b6d5d5e8a4a
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F1624]' : 'bg-white'}`}>
       {/* Hero Section */}
@@ -201,6 +214,7 @@ const Podcasts = () => {
               Learn from experts and stay updated with the latest developments.
             </p>
             <div className="flex items-center gap-4">
+<<<<<<< HEAD
               <button 
                 onClick={handlePodcastPlanClick}
                 className="bg-[#00FFB2] hover:bg-[#00FFB2]/90 text-gray-900 px-6 py-3 rounded-full font-medium transition-all">
@@ -209,6 +223,12 @@ const Podcasts = () => {
               <button 
                 onClick={handleLatestEpisode}
                 className={`flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-800'} hover:text-[#00FFB2] transition-colors`}>
+=======
+              <button className="bg-[#00FFB2] hover:bg-[#00FFB2]/90 text-gray-900 px-6 py-3 rounded-full font-medium transition-all">
+                Start Listening
+              </button>
+              <button className={`flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-800'} hover:text-[#00FFB2] transition-colors`}>
+>>>>>>> e193c35528bdafce83dfe8f519c06b6d5d5e8a4a
                 <FaPlay /> Latest Episode
               </button>
             </div>
@@ -245,9 +265,13 @@ const Podcasts = () => {
                   <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     {podcast.description}
                   </p>
+<<<<<<< HEAD
                   <button 
                     onClick={handlePlayPodcast}
                     className="mt-4 flex items-center gap-2 text-[#00FFB2] hover:text-[#00FFB2]/80 transition-colors">
+=======
+                  <button className="mt-4 flex items-center gap-2 text-[#00FFB2] hover:text-[#00FFB2]/80 transition-colors">
+>>>>>>> e193c35528bdafce83dfe8f519c06b6d5d5e8a4a
                     <FaPlay size={12} /> Play now
                   </button>
                 </div>
@@ -276,9 +300,13 @@ const Podcasts = () => {
                   <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                     {podcast.title}
                   </h3>
+<<<<<<< HEAD
                   <button 
                     onClick={handlePlayPodcast}
                     className="mt-4 flex items-center gap-2 text-[#00FFB2] hover:text-[#00FFB2]/80 transition-colors">
+=======
+                  <button className="mt-4 flex items-center gap-2 text-[#00FFB2] hover:text-[#00FFB2]/80 transition-colors">
+>>>>>>> e193c35528bdafce83dfe8f519c06b6d5d5e8a4a
                     <FaPlay size={12} /> Play now
                   </button>
                 </div>
