@@ -416,7 +416,7 @@ const Pricing = () => {
               <ul className="space-y-3 mb-6">
                 {[
                   "Free resources",
-                  "Early access to podcast episodes",
+                  "Early access to latest podcast episodes",
                   "10–15% discount on courses",
                   "Access to community groups",
                   "Podcast attendee badge",
