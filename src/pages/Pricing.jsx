@@ -322,10 +322,10 @@ const Pricing = () => {
       price: "499",
       level: "Beginner",
       features: [
-        "Access to basic courses",
+        "Running Galaxy Platform",
         "Community forum access",
         "Basic progress tracking",
-        "Email support",
+        
         "Course Certificate Included"
       ]
     },
@@ -334,8 +334,9 @@ const Pricing = () => {
       price: "999",
       level: "Intermediate",
       features: [
-        "All Beginner features",
-        "Advanced course access",
+        "All features of Beginner plan",
+        "Introduction to Ubuntu Commandline",
+        "Running the Process with ubuntu based commandline Tools",
         "Practice exercises",
         "Priority email support",
         "Course Certificate Included"
@@ -346,11 +347,10 @@ const Pricing = () => {
       price: "1499",
       level: "Advanced",
       features: [
-        "All Intermediate features",
-        "Expert-led workshops",
-        "Live Q&A sessions",
+        "All features of Beginner & Intermediate plan",
+        "Introduction to R and Python Programming",  
+        "Running genome analysis with R",
         "Personalized learning path",
-        "1-on-1 mentoring sessions",
         "Course Certificate Included"
       ]
     },
@@ -359,7 +359,9 @@ const Pricing = () => {
       price: "2499",
       level: "Expert",
       features: [
-        "All Advanced features",
+        "All features of Beginner,Intermediate & Advanced plan",
+        "Introduction to machine learning",
+        "Training your machine learning modals",
         "Industry projects",
         "Career guidance",
         "Job placement assistance",

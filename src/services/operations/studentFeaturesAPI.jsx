@@ -81,7 +81,7 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch,
     // Create order
     const orderResponse = await apiConnector("POST", COURSE_PAYMENT_API, {
       courses: courseIds,
-      amount: amount,
+      amount: amount,  // amount is already in INR
     }, {
       Authorization: `Bearer ${token}`,
     });
@@ -100,7 +100,7 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch,
     // Initialize Razorpay options
     const options = {
       key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_hKQBqNbBT98Kkw", // Fallback to test key
-      amount: orderResponse.data.amount, // Use the amount from the order response
+      amount: amount, // amount in INR
       currency,
       name: "OmixLab",
       description: courseNames.length > 30 
