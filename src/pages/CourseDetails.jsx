@@ -33,7 +33,9 @@ function CourseDetails() {
 
   // Getting courseId from url parameter
   const { courseId } = useParams()
-  // console.log(`course id: ${courseId}`)
+  
+  // State for selected course level
+  const [selectedLevel, setSelectedLevel] = useState(0)
 
   // Declear a state to save the course details
   const [response, setResponse] = useState(null)
@@ -224,7 +226,7 @@ function CourseDetails() {
             <span className="mx-2">/</span>
             <Link to="/courses" className="hover:underline">Courses</Link>
             <span className="mx-2">/</span>
-            <span>Python Programming</span>
+            <span>{courseName}</span>
           </div>
           <h1 className="text-4xl font-bold">{courseName}</h1>
         </div>
@@ -327,6 +329,156 @@ function CourseDetails() {
                     handleActive={handleActive}
                   />
                 ))}
+              </div>
+            </div>
+
+            {/* Choose Your Skill Level Section */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-4">Choose Your Skill Level</h2>
+              <p className="text-lg mb-8">
+                Select the appropriate skill level to accelerate your Python journey. Each tier builds upon the previous one, allowing you to progress at your own pace.
+              </p>
+
+              {/* Skill Level Navigation */}
+              <div className={`flex mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg overflow-hidden`}>
+                {courseLevels.map((level, index) => (
+                  <button
+                    key={index}
+                    className={`flex-1 py-3 px-4 text-center transition-colors ${
+                      index === selectedLevel
+                        ? isDarkMode ? 'bg-gray-700 shadow-md' : 'bg-white shadow-md'
+                        : isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                    }`}
+                    onClick={() => setSelectedLevel(index)}
+                  >
+                    {level.title}
+                  </button>
+                ))}
+              </div>
+
+              {/* Course Level Details */}
+              <div className={`grid md:grid-cols-2 gap-8 ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50'} rounded-lg p-8 mb-8`}>
+                {/* Left Column - Course Details */}
+                <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
+                  <h3 className="text-2xl font-bold mb-2">
+                    {courseLevels[selectedLevel].title === "Beginner" 
+                      ? `${courseName} for Beginners`
+                      : courseLevels[selectedLevel].title === "Intermediate"
+                      ? `Intermediate ${courseName}`
+                      : courseLevels[selectedLevel].title === "Advanced"
+                      ? `Advanced ${courseName}`
+                      : `${courseName} Expert Specialization`}
+                  </h3>
+                  <p className="text-lg mb-6">
+                    {selectedLevel === 0 
+                      ? `Perfect for those with no prior ${courseName} experience. Learn fundamentals, basic syntax, and start building simple applications.`
+                      : selectedLevel === 1
+                      ? `For those with basic ${courseName} knowledge. Deepen your skills and learn more advanced concepts.`
+                      : selectedLevel === 2
+                      ? `For experienced programmers. Master complex ${courseName} concepts and build sophisticated applications.`
+                      : `For professional developers seeking mastery. Focus on specialized domains and cutting-edge ${courseName} applications.`}
+                  </p>
+                  <div className="grid gap-4 mb-6">
+                    {courseLevels[selectedLevel].features.map((feature, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <Check className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-8 mb-4">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Duration</p>
+                      <p className="font-semibold">
+                        {selectedLevel === 0 ? "20hr 30m" :
+                         selectedLevel === 1 ? "35hr 45m" :
+                         selectedLevel === 2 ? "60hr 40m" :
+                         "90hr 20m"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Lessons</p>
+                      <p className="font-semibold">
+                        {selectedLevel === 0 ? "28" :
+                         selectedLevel === 1 ? "42" :
+                         selectedLevel === 2 ? "84" :
+                         "120"} Lessons
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`inline-block px-3 py-1 rounded-full text-sm ${
+                    selectedLevel === 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                    selectedLevel === 1 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
+                    selectedLevel === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' :
+                    'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                  }`}>
+                    {courseLevels[selectedLevel].title}
+                  </div>
+                </div>
+
+                {/* Right Column - Course Preview */}
+                <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
+                  <div className="mb-6">
+                    <h4 className="text-xl font-semibold mb-4">What you'll get</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium">HD Video Lessons</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Clear and concise explanations</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium">Hands-on Projects</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Build real-world applications</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium">Course Resources</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Code samples and materials</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium">Certificate</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Upon course completion</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleBuyCourse(courseLevels[selectedLevel].price)}
+                    className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
+                      selectedLevel === 0 ? 'bg-blue-600 hover:bg-blue-700' :
+                      selectedLevel === 1 ? 'bg-green-600 hover:bg-green-700' :
+                      selectedLevel === 2 ? 'bg-orange-600 hover:bg-orange-700' :
+                      'bg-purple-600 hover:bg-purple-700'
+                    }`}
+                  >
+                    Enroll Now - ₹{courseLevels[selectedLevel].price}
+                  </button>
+                </div>
               </div>
             </div>
 
