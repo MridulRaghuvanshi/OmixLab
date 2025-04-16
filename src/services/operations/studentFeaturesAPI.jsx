@@ -4,6 +4,7 @@ import { apiConnector } from "../apiconnector";
 import { setPaymentLoading } from "../../slices/courseSlice";
 import { resetCart } from "../../slices/cartSlice";
 import logo from "../../assets/Logo/Logo-Full-Light.png";
+import { logout } from "./authAPI";
 
 const { COURSE_PAYMENT_API, COURSE_VERIFY_API, SEND_PAYMENT_SUCCESS_EMAIL_API } = studentEndpoints;
 const { COURSE_DETAILS_API } = courseEndpoints;
@@ -30,7 +31,7 @@ function loadScript(src) {
 export async function buyCourse(token, courses, userDetails, navigate, dispatch, totalAmount) {
   const toastId = toast.loading("Loading...");
   dispatch(setPaymentLoading(true));
-
+  
   try {
     // Load Razorpay script
     const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
@@ -39,140 +40,76 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch,
       return;
     }
 
-    if (!courses || courses.length === 0) {
-      toast.error("No courses selected");
-      return;
-    }
-
-    // Extract course IDs
-    const courseIds = courses.map(course => {
-      if (typeof course === 'object' && course !== null) {
-        return course.id || course._id;
-      }
-      return course;
-    });
-    
-    // Get course price if not provided
-    let amount = totalAmount;
-    if (!amount && courseIds.length === 1) {
-      try {
-        console.log("Fetching course details for price:", courseIds[0]);
-        const singleCourseResponse = await apiConnector("GET", 
-          `${COURSE_DETAILS_API}/${courseIds[0]}`, 
-          null, 
-          { Authorization: `Bearer ${token}` }
-        );
-        
-        if (singleCourseResponse.data.success) {
-          amount = singleCourseResponse.data.data.courseDetails.price;
-          console.log("Retrieved course price:", amount);
-        } else {
-          throw new Error("Could not fetch course price");
-        }
-      } catch (error) {
-        console.error("Error fetching course price:", error);
-        toast.error("Could not fetch course price. Please try again.");
-        return;
-      }
-    }
-    
-    console.log("Initiating payment for courses:", courseIds, "Total amount:", amount);
+    // Create headers
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
 
     // Create order
-    const orderResponse = await apiConnector("POST", COURSE_PAYMENT_API, {
-      courses: courseIds,
-      amount: amount,  // amount is already in INR
-    }, {
-      Authorization: `Bearer ${token}`,
-    });
-
-    console.log("Order response:", orderResponse.data);
+    const orderResponse = await apiConnector(
+      "POST", 
+      COURSE_PAYMENT_API, 
+      {
+        courses: courses,
+        amount: totalAmount,
+      }, 
+      headers
+    );
 
     if (!orderResponse.data.success) {
       throw new Error(orderResponse.data.message || "Could not create order");
     }
 
-    const { orderId, currency } = orderResponse.data;
-
-    // Prepare course names for description
-    const courseNames = courses.map(course => course.courseName || "Course").join(", ");
-
-    // Initialize Razorpay options
     const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_hKQBqNbBT98Kkw", // Fallback to test key
-      amount: amount, // amount in INR
-      currency,
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount: totalAmount,
+      currency: orderResponse.data.currency || "INR",
       name: "OmixLab",
-      description: courseNames.length > 30 
+      description: courses.length > 1 
         ? `Purchase of ${courses.length} courses` 
-        : `Purchase: ${courseNames}`,
-      image: logo,
-      order_id: orderId,
+        : "Course Purchase",
+      order_id: orderResponse.data.orderId,
       prefill: {
-        name: `${userDetails.firstName} ${userDetails.lastName || ""}`.trim(),
-        email: userDetails.email,
-        contact: userDetails.contactNumber || "",
-      },
-      notes: {
-        courseIds: JSON.stringify(courseIds),
-      },
-      theme: {
-        color: "#00FFB2",
+        name: userDetails?.firstName + " " + (userDetails?.lastName || ""),
+        email: userDetails?.email,
       },
       handler: async function(response) {
         try {
-          console.log("Payment successful, verifying...", response);
-          
-          const verificationResponse = await apiConnector("POST", COURSE_VERIFY_API, {
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_signature: response.razorpay_signature,
-            courses: courseIds,
-            amount: amount,
-          }, {
-            Authorization: `Bearer ${token}`,
-          });
+          const verificationResponse = await apiConnector(
+            "POST",
+            COURSE_VERIFY_API,
+            {
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              courses: courses,
+              amount: totalAmount,
+            },
+            headers
+          );
 
           if (!verificationResponse.data.success) {
-            throw new Error(verificationResponse.data.message || "Payment verification failed");
+            throw new Error(verificationResponse.data.message);
           }
 
-          // Send success email
-          await apiConnector("POST", SEND_PAYMENT_SUCCESS_EMAIL_API, {
-            orderId: response.razorpay_order_id,
-            paymentId: response.razorpay_payment_id,
-            amount: amount,
-            courses: courseIds,
-          }, {
-            Authorization: `Bearer ${token}`,
-          });
-
-          toast.success("Payment successful! You are now enrolled in the courses.");
-          dispatch(resetCart());
+          toast.success("Payment Successful. You have been enrolled in the course.");
           navigate("/dashboard/enrolled-courses");
         } catch (error) {
           console.error("Payment verification failed:", error);
-          toast.error(error.message || "Payment verification failed. Please contact support.");
+          toast.error("Payment verification failed");
         }
-      }
+      },
     };
 
-    // Create Razorpay instance
     const paymentObject = new window.Razorpay(options);
-    
-    // Handle payment failures
-    paymentObject.on("payment.failed", function(response) {
-      toast.error(`Payment failed: ${response.error.description}`);
-    });
-
-    // Open Razorpay
     paymentObject.open();
 
   } catch (error) {
     console.error("BUY_COURSE_API ERROR:", error);
-    toast.error(error.message || "Could not initiate payment.");
+    toast.error("Failed to process purchase. Please try again.");
   } finally {
-    toast.dismiss(toastId);
     dispatch(setPaymentLoading(false));
+    toast.dismiss(toastId);
   }
 }

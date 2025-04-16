@@ -21,6 +21,8 @@ import GetAvgRating from "../utils/avgRating"
 import Error from "./Error"
 import { toast } from "react-hot-toast"
 import { useTheme } from "../context/ThemeContext"
+import Chatbot from "../components/common/Chatbot"
+import { logout } from "../services/operations/authAPI"
 
 function CourseDetails() {
   const { user } = useSelector((state) => state.profile)
@@ -175,32 +177,21 @@ function CourseDetails() {
     createdAt,
   } = response.data?.courseDetails
 
-  const handleBuyCourse = (selectedPrice) => {
-    if (user?.accountType === "Educator") {
-      toast.error("As an educator, you cannot purchase courses. You can only create and manage courses.");
+  const handleBuyCourse = async () => {
+    if (!user) {
+      toast.error("Please login to purchase the course");
+      navigate("/login");
       return;
     }
 
-    if (!courseId) {
-      console.error("courseId is undefined!");
-      return toast.error("Course ID is missing.");
+    if (!token) {
+      toast.error("Please login first");
+      navigate("/login");
+      return;
     }
 
     try {
-      if (token) {
-        // Pass the selected price
-        buyCourse(token, [courseId], user, navigate, dispatch, selectedPrice);
-        return;
-      }
-
-      setConfirmationModal({
-        text1: "You are not logged in!",
-        text2: "Please login to Purchase Course.",
-        btn1Text: "Login",
-        btn2Text: "Cancel",
-        btn1Handler: () => navigate("/login"),
-        btn2Handler: () => setConfirmationModal(null),
-      });
+      await buyCourse(token, [course_id], user, navigate, dispatch, courseLevels[selectedLevel].price);
     } catch (error) {
       console.error("Error in handleBuyCourse:", error);
       toast.error("Failed to process purchase. Please try again.");
@@ -252,11 +243,15 @@ function CourseDetails() {
             </div>
 
             {/* Video Preview */}
-            <div className="mb-8">
+            <div className="mb-8 relative w-full aspect-video rounded-lg overflow-hidden">
+              {console.log("Video URL:", response?.data?.courseDetails?.introVideo)}
               <Player
                 playsInline
                 poster={thumbnail}
-                src={response.data?.courseDetails.previewVideo}
+                src={response?.data?.courseDetails?.introVideo}
+                className="rounded-lg w-full h-full object-cover"
+                fluid={true}
+                aspectRatio="auto"
               >
                 <BigPlayButton position="center" />
               </Player>
@@ -329,6 +324,60 @@ function CourseDetails() {
                     handleActive={handleActive}
                   />
                 ))}
+              </div>
+            </div>
+
+            {/* Course Requirements Section */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-6">Course Requirements</h2>
+              <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <ul className="list-disc pl-6 space-y-3">
+                  <li>Basic understanding of computer operations</li>
+                  <li>No prior programming experience needed for beginner level</li>
+                  <li>A computer with internet connection</li>
+                  <li>Willingness to learn and practice</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Course Benefits Section */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-6">Course Benefits</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <h3 className="text-xl font-semibold mb-4">Career Opportunities</h3>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>Industry-recognized certification</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>Portfolio-ready projects</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>Job placement assistance</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <h3 className="text-xl font-semibold mb-4">Learning Support</h3>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>24/7 Discord community access</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>Weekly live Q&A sessions</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>1-on-1 mentoring sessions</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
 
@@ -468,7 +517,7 @@ function CourseDetails() {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleBuyCourse(courseLevels[selectedLevel].price)}
+                    onClick={handleBuyCourse}
                     className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
                       selectedLevel === 0 ? 'bg-blue-600 hover:bg-blue-700' :
                       selectedLevel === 1 ? 'bg-green-600 hover:bg-green-700' :
@@ -566,85 +615,163 @@ function CourseDetails() {
             {/* Meet Your Educator Section */}
             <div className="mb-12">
               <h2 className="text-2xl font-bold mb-6">Meet Your Educator</h2>
-              <div className={`flex items-start gap-6 p-6 rounded-lg ${
+              <div className={`flex flex-col md:flex-row items-start gap-6 p-6 rounded-lg ${
                 isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
               }`}>
-                <img
-                  src={
-                    Educator.image
-                      ? Educator.image
-                      : `https://api.dicebear.com/5.x/initials/svg?seed=${Educator.firstName} ${Educator.lastName}`
-                  }
-                  alt={`${Educator.firstName} ${Educator.lastName}`}
-                  className="w-24 h-24 rounded-full"
-                />
-                <div>
+                <div className="flex-shrink-0">
+                  <img
+                    src={
+                      Educator.image
+                        ? Educator.image
+                        : `https://api.dicebear.com/5.x/initials/svg?seed=${Educator.firstName} ${Educator.lastName}`
+                    }
+                    alt={`${Educator.firstName} ${Educator.lastName}`}
+                    className="w-24 h-24 rounded-full object-cover"
+                  />
+                </div>
+                <div className="flex-grow">
                   <h3 className="text-xl font-bold mb-2">
                     {Educator.firstName} {Educator.lastName}
                   </h3>
-                  <p className="text-sm mb-2">{Educator?.additionalDetails?.designation}</p>
-                  <p className="text-sm mb-4">{Educator?.additionalDetails?.experience} years of experience</p>
-                  <p className="text-sm">{Educator?.additionalDetails?.about}</p>
+                  <p className="text-sm mb-2">{Educator?.additionalDetails?.designation || "Course Instructor"}</p>
+                  <p className="text-sm mb-4">{Educator?.additionalDetails?.experience || "5+"} years of experience</p>
+                  <p className="text-sm">{Educator?.additionalDetails?.about || "Experienced educator passionate about teaching and helping students achieve their learning goals."}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {Educator?.additionalDetails?.expertise?.map((skill, index) => (
+                      <span
+                        key={index}
+                        className={`px-3 py-1 rounded-full text-sm ${
+                          isDarkMode 
+                            ? 'bg-gray-700 text-gray-300' 
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {skill}
+                      </span>
+                    )) || (
+                      <span className={`px-3 py-1 rounded-full text-sm ${
+                        isDarkMode 
+                          ? 'bg-gray-700 text-gray-300' 
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {courseName}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Course Cards */}
+          {/* Right Column */}
           <div className="lg:col-span-1">
-            {courseLevels.map((level, index) => (
-              <div
-                key={index}
-                className={`mb-4 rounded-lg p-6 ${
-                  isDarkMode
-                    ? 'bg-gray-800 hover:bg-gray-700'
-                    : 'bg-white hover:bg-gray-50'
-                } shadow-lg transition-all duration-300`}
-              >
-                <h3 className="text-xl font-bold mb-2">{level.title}</h3>
-                <p className="text-sm mb-4">{level.subtitle}</p>
-                <div className="mb-4">
-                  <span className="text-3xl font-bold">₹{level.price}</span>
-                  <span className="text-sm ml-2">INR</span>
-                  <p className="text-sm mt-1">One-time payment</p>
-                </div>
-                <div className="space-y-2 mb-6">
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span>Level: {level.title}</span>
+            {/* FAQ Section */}
+            <div className={`sticky top-4 space-y-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+                <h2 className="text-xl font-bold mb-4">Frequently Asked Questions</h2>
+                <div className="space-y-4">
+                  <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                    <h3 className="text-lg font-semibold mb-2">How long do I have access to the course?</h3>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      You get lifetime access to the course content, including all future updates.
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span>Duration: {level.duration}</span>
+                  <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                    <h3 className="text-lg font-semibold mb-2">Is there a certificate upon completion?</h3>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Yes, you'll receive a certificate of completion after finishing the course.
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span>Videos: {level.lessons} lessons</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span>Lifetime Access</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span>Access From Any Device</span>
+                  <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                    <h3 className="text-lg font-semibold mb-2">What if I'm not satisfied with the course?</h3>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      We offer a 30-day money-back guarantee if you're not satisfied with the course.
+                    </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleBuyCourse(level.price)}
-                  className={`w-full py-2 rounded-md font-medium transition-colors ${
-                    index === 0 ? 'bg-blue-600 hover:bg-blue-700' :
-                    index === 1 ? 'bg-green-600 hover:bg-green-700' :
-                    index === 2 ? 'bg-orange-600 hover:bg-orange-700' :
-                    'bg-purple-600 hover:bg-purple-700'
-                  } text-white`}
-                >
-                  Add to Cart
-                </button>
+              </div>
+
+              {/* Chatbot Component */}
+              <Chatbot />
+            </div>
+          </div>
+        </div>
+
+        {/* Student Testimonials Section */}
+        <div className="mt-16 mb-12">
+          <h2 className="text-2xl font-bold mb-8">What Our Students Say</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ratingAndReviews?.slice(0, 3).map((review, index) => (
+              <div key={index} className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+                <div className="flex items-center gap-4 mb-4">
+                  <img
+                    src={review?.user?.image || `https://api.dicebear.com/5.x/initials/svg?seed=${review?.user?.firstName} ${review?.user?.lastName}`}
+                    alt={review?.user?.firstName}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                  <div>
+                    <h4 className="font-semibold">{review?.user?.firstName} {review?.user?.lastName}</h4>
+                    <div className="flex items-center">
+                      <RatingStars Review_Count={review?.rating} />
+                    </div>
+                  </div>
+                </div>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {review?.review || "This course has been incredibly helpful in advancing my programming skills."}
+                </p>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Course Highlights Section */}
+        <div className="mb-16">
+          <h2 className="text-2xl font-bold mb-8">Course Highlights</h2>
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`p-3 rounded-full ${isDarkMode ? 'bg-blue-900' : 'bg-blue-100'}`}>
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold">Comprehensive Curriculum</h3>
+              </div>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Structured learning path with practical examples and real-world applications
+              </p>
+            </div>
+
+            <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`p-3 rounded-full ${isDarkMode ? 'bg-green-900' : 'bg-green-100'}`}>
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold">Industry Recognition</h3>
+              </div>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Certificate recognized by top companies and industry experts
+              </p>
+            </div>
+
+            <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`p-3 rounded-full ${isDarkMode ? 'bg-purple-900' : 'bg-purple-100'}`}>
+                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold">Community Support</h3>
+              </div>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Join a thriving community of learners and industry professionals
+              </p>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* Footer */}
