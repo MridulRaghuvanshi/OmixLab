@@ -640,3 +640,34 @@ exports.deleteCourse = async (req, res) => {
     })
   }
 }
+
+exports.getRelatedCourseLevels = async (req, res) => {
+  try {
+    const { courseName, educatorId, currentCourseId } = req.body;
+
+    // Find all published courses with the same name by the same educator
+    const relatedCourses = await Course.find({
+      courseName: courseName,
+      Educator: educatorId,
+      status: "Published",
+      _id: { $ne: currentCourseId } // Exclude current course
+    })
+    .populate("Educator", "firstName lastName email image")
+    .select("courseName level price thumbnail courseDescription studentsEnrolled ratingAndReviews")
+    .sort({ level: 1 }); // Sort by level
+
+    return res.status(200).json({
+      success: true,
+      message: "Related course levels fetched successfully",
+      data: relatedCourses
+    });
+
+  } catch (error) {
+    console.error("Error fetching related course levels:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch related course levels",
+      error: error.message
+    });
+  }
+};

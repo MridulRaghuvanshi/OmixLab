@@ -4,7 +4,7 @@ import { RxCross2 } from "react-icons/rx"
 import ReactStars from "react-rating-stars-component"
 import { useSelector } from "react-redux"
 
-import { createRating } from "../../../services/operations/courseDetailsAPI"
+import { createRating } from "../../../services/operations/courseDetailsAPI.jsx"
 import IconBtn from "../../common/IconBtn"
 
 export default function CourseReviewModal({ setReviewModal }) {

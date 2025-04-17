@@ -17,7 +17,7 @@ const {
   UPDATE_SUBSECTION_API,
   DELETE_SECTION_API,
   DELETE_SUBSECTION_API,
-  GET_ALL_EDUCATOR_COURSES_API,
+  GET_ALL_INSTRUCTOR_COURSES_API,
   DELETE_COURSE_API,
   GET_FULL_COURSE_DETAILS_AUTHENTICATED,
   CREATE_RATING_API,
@@ -264,16 +264,14 @@ export const fetchEducatorCourses = async (token) => {
   let result = []
   const toastId = toast.loading("Loading...")
   try {
-    console.log(token);
     const response = await apiConnector(
       "GET",
-      GET_ALL_EDUCATOR_COURSES_API,
+      GET_ALL_INSTRUCTOR_COURSES_API,
       null,
       {
         Authorization: `Bearer ${token}`,
       }
     )
-    
     
     console.log("Educator COURSES API RESPONSE............", response)
     if (!response?.data?.success) {
@@ -396,5 +394,81 @@ export const createRating = async (data, token) => {
   toast.dismiss(toastId)
   return success
 }
+
+// Fetch related course levels by the same educator
+export const fetchRelatedCourseLevels = async (courseName, educatorId, currentCourseId, token) => {
+  const toastId = toast.loading("Loading related levels...");
+  try {
+    const response = await apiConnector(
+      "POST",
+      courseEndpoints.COURSE_RELATED_LEVELS_API,
+      {
+        courseName,
+        educatorId,
+        currentCourseId,
+      },
+      {
+        Authorization: `Bearer ${token}`,
+      }
+    );
+
+    if (!response?.data?.success) {
+      throw new Error("Could not fetch related courses");
+    }
+
+    // Sort levels by difficulty
+    const sortedLevels = response.data.data.sort((a, b) => {
+      const order = { "Beginner": 0, "Intermediate": 1, "Advanced": 2, "Expert": 3 };
+      return order[a.level] - order[b.level];
+    });
+
+    return sortedLevels;
+  } catch (error) {
+    console.log("FETCH_RELATED_COURSES_API ERROR............", error);
+    toast.error(error.message);
+    return [];
+  } finally {
+    toast.dismiss(toastId);
+  }
+};
+
+// Helper function to sort levels
+const sortLevels = (levels) => {
+  return levels.sort((a, b) => {
+    const order = { "Beginner": 0, "Intermediate": 1, "Advanced": 2, "Expert": 3 };
+    return order[a.level] - order[b.level];
+  });
+};
+
+// Group courses by title and educator
+export const groupCoursesByTitleAndEducator = (courses) => {
+  if (!Array.isArray(courses)) return [];
+  
+  const groupedCourses = {};
+  
+  courses.forEach(course => {
+    if (!course?.courseName || !course?.Educator?._id) return;
+    
+    const key = `${course.courseName}-${course.Educator._id}`;
+    if (!groupedCourses[key]) {
+      groupedCourses[key] = {
+        ...course,
+        levels: [course],
+        thumbnail: course.thumbnail,
+        price: course.price,
+        Educator: course.Educator,
+        courseName: course.courseName,
+        _id: course._id,
+        category: course.category
+      };
+    } else {
+      groupedCourses[key].levels.push(course);
+      // Sort levels by difficulty
+      groupedCourses[key].levels = sortLevels(groupedCourses[key].levels);
+    }
+  });
+  
+  return Object.values(groupedCourses);
+};
 
 

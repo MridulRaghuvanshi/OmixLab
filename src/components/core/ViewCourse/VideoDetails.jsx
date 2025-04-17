@@ -6,7 +6,7 @@ import "video-react/dist/video-react.css"
 import { useLocation } from "react-router-dom"
 import { BigPlayButton, Player } from "video-react"
 
-import { markLectureAsComplete } from "../../../services/operations/courseDetailsAPI"
+import { markLectureAsComplete } from "../../../services/operations/courseDetailsAPI.jsx"
 import { updateCompletedLectures } from "../../../slices/viewCourseSlice"
 import IconBtn from "../../common/IconBtn"
 

@@ -2,8 +2,16 @@ const mongoose = require("mongoose");
 
 // Define the Courses schema
 const coursesSchema = new mongoose.Schema({
-	courseName: { type: String },
-	courseDescription: { type: String },
+	courseName: {
+		type: String,
+		required: true,
+		trim: true,
+	},
+	courseDescription: {
+		type: String,
+		required: true,
+		trim: true,
+	},
 	Educator: {
 		type: mongoose.Schema.Types.ObjectId,
 		required: true,
@@ -58,12 +66,12 @@ const coursesSchema = new mongoose.Schema({
 	},
 	level: {
 		type: String,
-		enum: ["Beginner", "Intermediate", "Advanced", "Expert"],
 		required: true,
+		enum: ["Beginner", "Intermediate", "Advanced", "Expert"],
 	},
 	createdAt: {
-		type:Date,
-		default:Date.now
+		type: Date,
+		default: Date.now
 	},
 });
 

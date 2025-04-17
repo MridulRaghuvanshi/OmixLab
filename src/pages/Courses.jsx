@@ -6,6 +6,8 @@ import { apiConnector } from '../services/apiconnector';
 import { courseEndpoints } from '../services/apis';
 import Course_Card from '../components/core/Catalog/Course_Card';
 import { useSelector } from 'react-redux';
+import { getAllCourses, groupCoursesByTitleAndEducator } from "../services/operations/courseDetailsAPI.jsx";
+import CourseCard from "../components/core/Course/CourseCard"
 
 const Courses = () => {
   const { isDarkMode } = useTheme();
@@ -13,7 +15,6 @@ const Courses = () => {
   const { token } = useSelector((state) => state.auth);
   const { user } = useSelector((state) => state.profile);
   const [courses, setCourses] = useState([]);
-  const [allCourses, setAllCourses] = useState([]);
   const [activeCategory, setActiveCategory] = useState('all');
   const [isLevelDropdownOpen, setIsLevelDropdownOpen] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState('all');
@@ -47,10 +48,8 @@ const Courses = () => {
       try {
         // Fetch categories
         const categoryResponse = await apiConnector('GET', courseEndpoints.COURSE_CATEGORIES_API);
-        console.log('Category API Response:', categoryResponse?.data);
         if (categoryResponse?.data?.success) {
           const categoriesData = categoryResponse.data.data;
-          console.log('Categories from API:', categoriesData);
           setCategories([
             { id: 'all', name: 'All Courses' },
             ...categoriesData.map(category => ({
@@ -60,64 +59,51 @@ const Courses = () => {
           ]);
         }
 
-        // Fetch courses
-        const courseResponse = await apiConnector('GET', courseEndpoints.GET_ALL_COURSE_API);
-        console.log('Course API Response:', courseResponse?.data);
-        if (courseResponse?.data?.success) {
-          const coursesData = courseResponse.data.data;
-          console.log('Courses with categories:', coursesData.map(course => ({
-            id: course._id,
-            name: course.courseName,
-            category: course.category
-          })));
-          setAllCourses(coursesData);
-          setCourses(coursesData.filter(course => hasAccessToLevel(course.level)));
+        // Fetch and group courses
+        const result = await getAllCourses();
+        if (result) {
+          // Group courses by title and educator
+          const groupedCourses = groupCoursesByTitleAndEducator(result);
+          
+          // Apply initial filters
+          const filteredCourses = filterCoursesHelper(groupedCourses, activeCategory, selectedLevel);
+          setCourses(filteredCourses);
         }
       } catch (error) {
-        console.log('Error fetching data:', error);
+        console.error("Error fetching data:", error);
       }
     };
     fetchData();
-  }, [user?.subscription?.level]);
+  }, []);
 
-  useEffect(() => {
-    filterCourses(activeCategory, selectedLevel);
-  }, [activeCategory, selectedLevel, allCourses]);
-
-  const filterCourses = (category, level) => {
-    let filteredCourses = [...allCourses];
-    console.log('Starting filter with:', { 
-      category, 
-      level, 
-      totalCourses: allCourses.length 
-    });
+  const filterCoursesHelper = (coursesToFilter, category, level) => {
+    let filtered = [...coursesToFilter];
     
-    // Filter by category
+    // Filter by category if not 'all'
     if (category !== 'all') {
-      filteredCourses = filteredCourses.filter(course => {
-        console.log('Checking course:', {
-          courseId: course._id,
-          courseCategory: course?.category?._id,
-          categoryName: course?.category?.name,
-          selectedCategory: category
-        });
-        // Match by category name
+      filtered = filtered.filter(course => {
         const courseCategorySlug = course?.category?.name?.toLowerCase().replace(/\s+/g, '-');
         return courseCategorySlug === category;
       });
-      console.log(`After category filter: ${filteredCourses.length} courses remaining`);
     }
     
-    // Filter by level
+    // Filter by level if not 'all'
     if (level !== 'all') {
-      filteredCourses = filteredCourses.filter(
-        course => course.level?.toLowerCase() === level.toLowerCase()
-      );
-      console.log(`After level filter: ${filteredCourses.length} courses remaining`);
+      filtered = filtered.filter(course => {
+        // Check if any level in the course matches the selected level
+        return course.levels?.some(courseLevel => 
+          courseLevel.level.toLowerCase() === level.toLowerCase()
+        );
+      });
     }
     
-    setCourses(filteredCourses);
+    return filtered;
   };
+
+  useEffect(() => {
+    const result = filterCoursesHelper(courses, activeCategory, selectedLevel);
+    setCourses(result);
+  }, [activeCategory, selectedLevel]);
 
   const handleCategoryClick = (categoryId) => {
     setActiveCategory(categoryId);
@@ -211,11 +197,7 @@ const Courses = () => {
 
           {/* Courses grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 my-8">
-            {courses && courses.length > 0 ? (
-              courses.map((course) => (
-                <Course_Card key={course._id} course={course} Height="h-[200px]" />
-              ))
-            ) : (
+            {courses?.length === 0 ? (
               <div className={`col-span-full flex flex-col items-center justify-center py-12 ${
                 isDarkMode ? "text-white" : "text-gray-700"
               }`}>
@@ -224,6 +206,14 @@ const Courses = () => {
                   Try adjusting your filters or check back later for new courses.
                 </p>
               </div>
+            ) : (
+              courses?.map((course) => (
+                <CourseCard
+                  key={course._id}
+                  course={course}
+                  height={"h-[250px]"}
+                />
+              ))
             )}
           </div>
         </div>

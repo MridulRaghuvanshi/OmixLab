@@ -15,7 +15,7 @@ import RatingStars from "../components/common/RatingStars"
 import CourseAccordionBar from "../components/core/Course/CourseAccordionBar"
 import CourseDetailsCard from "../components/core/Course/CourseDetailsCard"
 import { formatDate } from "../services/formatDate"
-import { fetchCourseDetails } from "../services/operations/courseDetailsAPI"
+import { fetchCourseDetails, fetchRelatedCourseLevels } from "../services/operations/courseDetailsAPI.jsx"
 import { buyCourse } from "../services/operations/studentFeaturesAPI"
 import GetAvgRating from "../utils/avgRating"
 import Error from "./Error"
@@ -35,25 +35,69 @@ function CourseDetails() {
 
   // Getting courseId from url parameter
   const { courseId } = useParams()
-  
+
   // State for selected course level
   const [selectedLevel, setSelectedLevel] = useState(0)
-
-  // Declear a state to save the course details
+  const [relatedCourseLevels, setRelatedCourseLevels] = useState([])
+  const [courseLevels, setCourseLevels] = useState([])
   const [response, setResponse] = useState(null)
   const [confirmationModal, setConfirmationModal] = useState(null)
+
   useEffect(() => {
-    // Calling fetchCourseDetails fucntion to fetch the details
+    // Calling fetchCourseDetails function to fetch the details
     ;(async () => {
       try {
         const res = await fetchCourseDetails(courseId)
-        // console.log("course details res: ", res)
         setResponse(res)
+        
+        if (res?.data?.courseDetails) {
+          const courseDetails = res.data.courseDetails;
+          const relatedLevels = await fetchRelatedCourseLevels(
+            courseDetails.courseName,
+            courseDetails.Educator._id,
+            courseId,
+            token
+          );
+          
+          // Combine current course with related levels and sort by level
+          const allLevels = [courseDetails, ...(relatedLevels || [])].sort((a, b) => {
+            const levelOrder = { "Beginner": 0, "Intermediate": 1, "Advanced": 2, "Expert": 3 };
+            return levelOrder[a.level] - levelOrder[b.level];
+          });
+          
+          setRelatedCourseLevels(allLevels);
+          
+          // Create course level data
+          const formattedLevels = allLevels.map((course) => ({
+            title: course.level,
+            subtitle: `${course.courseName} - ${course.level} Level`,
+            price: course.price,
+            duration: course.duration || "8 weeks",
+            lessons: course.courseContent?.reduce((total, section) => 
+              total + (section.subSection?.length || 0), 0) || 0,
+            features: course.whatYouWillLearn ? 
+              typeof course.whatYouWillLearn === 'string' ? 
+                course.whatYouWillLearn.split(',').map(item => item.trim()) :
+                course.whatYouWillLearn : [],
+            _id: course._id,
+            courseContent: course.courseContent || [],
+            thumbnail: course.thumbnail,
+            Educator: course.Educator,
+            ratingAndReviews: course.ratingAndReviews || []
+          }));
+          
+          setCourseLevels(formattedLevels);
+          
+          // Find index of current course
+          const currentIndex = allLevels.findIndex(course => course._id === courseId);
+          setSelectedLevel(currentIndex !== -1 ? currentIndex : 0);
+        }
       } catch (error) {
-        console.log("Could not fetch Course Details")
+        console.log("Could not fetch Course Details", error)
+        toast.error("Error loading course details")
       }
     })()
-  }, [courseId])
+  }, [courseId, token])
 
   // console.log("response: ", response)
 
@@ -86,71 +130,6 @@ function CourseDetails() {
     })
     setTotalNoOfLectures(lectures)
   }, [response])
-
-  const courseLevels = [
-    {
-      title: "Beginner",
-      subtitle: "Perfect for those just starting out",
-      price: 499,
-      duration: "4 weeks",
-      lessons: 12,
-      features: [
-        "Basic Python syntax and data types",
-        "Control flow and functions",
-        "Simple data structures",
-        "Basic file handling",
-        "Certificate of completion"
-      ]
-    },
-    {
-      title: "Intermediate",
-      subtitle: "For those with basic Python knowledge",
-      price: 999,
-      duration: "8 weeks",
-      lessons: 24,
-      features: [
-        "Object-oriented programming",
-        "Advanced data structures",
-        "Error handling and debugging",
-        "Basic algorithms",
-        "Project-based learning",
-        "Certificate of completion"
-      ]
-    },
-    {
-      title: "Advanced",
-      subtitle: "For experienced Python developers",
-      price: 1499,
-      duration: "12 weeks",
-      lessons: 36,
-      features: [
-        "Advanced OOP concepts",
-        "Design patterns",
-        "Testing and debugging",
-        "Performance optimization",
-        "Real-world projects",
-        "1-on-1 mentoring",
-        "Certificate of completion"
-      ]
-    },
-    {
-      title: "Expert",
-      subtitle: "Master Python programming",
-      price: 2499,
-      duration: "16 weeks",
-      lessons: 48,
-      features: [
-        "Advanced algorithms",
-        "System design",
-        "Performance optimization",
-        "Security best practices",
-        "Industry projects",
-        "Career guidance",
-        "Lifetime access",
-        "Certificate of completion"
-      ]
-    }
-  ];
 
   if (loading || !response) {
     return (
@@ -191,7 +170,19 @@ function CourseDetails() {
     }
 
     try {
-      await buyCourse(token, [course_id], user, navigate, dispatch, courseLevels[selectedLevel].price);
+      const selectedCourseLevel = courseLevels[selectedLevel];
+      if (!selectedCourseLevel) {
+        throw new Error("Selected course level not found");
+      }
+      
+      await buyCourse(
+        token, 
+        [selectedCourseLevel._id], 
+        user, 
+        navigate, 
+        dispatch, 
+        selectedCourseLevel.price
+      );
     } catch (error) {
       console.error("Error in handleBuyCourse:", error);
       toast.error("Failed to process purchase. Please try again.");
@@ -221,7 +212,7 @@ function CourseDetails() {
           </div>
           <h1 className="text-4xl font-bold">{courseName}</h1>
         </div>
-      </div>
+            </div>
 
       {/* Course Details Section */}
       <div className="mx-auto w-11/12 max-w-maxContent py-12">
@@ -239,30 +230,30 @@ function CourseDetails() {
                 Python is one of the most popular programming languages used in data science, machine learning, web development, 
                 automation, and more. Our course is designed by industry experts to provide you with practical skills that are in high 
                 demand.
-              </p>
-            </div>
+                </p>
+              </div>
 
             {/* Video Preview */}
             <div className="mb-8 relative w-full aspect-video rounded-lg overflow-hidden">
               {console.log("Video URL:", response?.data?.courseDetails?.introVideo)}
-              <Player
-                playsInline
+                    <Player 
+                      playsInline 
                 poster={thumbnail}
                 src={response?.data?.courseDetails?.introVideo}
                 className="rounded-lg w-full h-full object-cover"
                 fluid={true}
                 aspectRatio="auto"
-              >
-                <BigPlayButton position="center" />
-              </Player>
-            </div>
+                    >
+                      <BigPlayButton position="center" />
+                    </Player>
+                  </div>
 
             {/* Course Stats */}
             <div className="flex items-center gap-6 mb-8">
               <div className="flex items-center gap-2">
                 <RatingStars Review_Count={avgReviewCount} />
                 <span>({ratingAndReviews?.length} reviews)</span>
-              </div>
+                </div>
               <div className="flex items-center gap-2">
                 <HiOutlineGlobeAlt />
                 <span>English</span>
@@ -286,19 +277,19 @@ function CourseDetails() {
                     >
                       <Check className="w-5 h-5 text-green-500 mt-1" />
                       <p>{item}</p>
-                    </div>
+            </div>
                   ))
                 ) : (
                   <div className={`col-span-2 p-4 rounded-lg ${
                     isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
                   }`}>
                     <p>Course learning outcomes will be available soon.</p>
-                  </div>
+          </div>
                 )}
-              </div>
             </div>
+          </div>
 
-            {/* Course Content Section */}
+          {/* Course Content Section */}
             <div className="mb-12">
               <h2 className="text-2xl font-bold mb-6">Course Content</h2>
               <div className="flex flex-wrap justify-between gap-2 mb-4">
@@ -315,15 +306,15 @@ function CourseDetails() {
                   </button>
                 </div>
               </div>
-              <div className="py-4">
-                {courseContent?.map((course, index) => (
-                  <CourseAccordionBar
-                    course={course}
-                    key={index}
-                    isActive={isActive}
-                    handleActive={handleActive}
-                  />
-                ))}
+            <div className="py-4">
+              {courseContent?.map((course, index) => (
+                <CourseAccordionBar
+                  course={course}
+                  key={index}
+                  isActive={isActive}
+                  handleActive={handleActive}
+                />
+              ))}
               </div>
             </div>
 
@@ -406,129 +397,131 @@ function CourseDetails() {
               </div>
 
               {/* Course Level Details */}
-              <div className={`grid md:grid-cols-2 gap-8 ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50'} rounded-lg p-8 mb-8`}>
-                {/* Left Column - Course Details */}
-                <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
-                  <h3 className="text-2xl font-bold mb-2">
-                    {courseLevels[selectedLevel].title === "Beginner" 
-                      ? `${courseName} for Beginners`
-                      : courseLevels[selectedLevel].title === "Intermediate"
-                      ? `Intermediate ${courseName}`
-                      : courseLevels[selectedLevel].title === "Advanced"
-                      ? `Advanced ${courseName}`
-                      : `${courseName} Expert Specialization`}
-                  </h3>
-                  <p className="text-lg mb-6">
-                    {selectedLevel === 0 
-                      ? `Perfect for those with no prior ${courseName} experience. Learn fundamentals, basic syntax, and start building simple applications.`
-                      : selectedLevel === 1
-                      ? `For those with basic ${courseName} knowledge. Deepen your skills and learn more advanced concepts.`
-                      : selectedLevel === 2
-                      ? `For experienced programmers. Master complex ${courseName} concepts and build sophisticated applications.`
-                      : `For professional developers seeking mastery. Focus on specialized domains and cutting-edge ${courseName} applications.`}
-                  </p>
-                  <div className="grid gap-4 mb-6">
-                    {courseLevels[selectedLevel].features.map((feature, index) => (
-                      <div key={index} className="flex items-start gap-3">
-                        <Check className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
-                        <span>{feature}</span>
+              {courseLevels[selectedLevel] && (
+                <div className={`grid md:grid-cols-2 gap-8 ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50'} rounded-lg p-8 mb-8`}>
+                  {/* Left Column - Course Details */}
+                  <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
+                    <h3 className="text-2xl font-bold mb-2">
+                      {courseLevels[selectedLevel].title === "Beginner" 
+                        ? `${courseName} for Beginners`
+                        : courseLevels[selectedLevel].title === "Intermediate"
+                        ? `Intermediate ${courseName}`
+                        : courseLevels[selectedLevel].title === "Advanced"
+                        ? `Advanced ${courseName}`
+                        : `${courseName} Expert Specialization`}
+                    </h3>
+                    <p className="text-lg mb-6">
+                      {selectedLevel === 0 
+                        ? `Perfect for those with no prior ${courseName} experience. Learn fundamentals, basic syntax, and start building simple applications.`
+                        : selectedLevel === 1
+                        ? `For those with basic ${courseName} knowledge. Deepen your skills and learn more advanced concepts.`
+                        : selectedLevel === 2
+                        ? `For experienced programmers. Master complex ${courseName} concepts and build sophisticated applications.`
+                        : `For professional developers seeking mastery. Focus on specialized domains and cutting-edge ${courseName} applications.`}
+                    </p>
+                    <div className="grid gap-4 mb-6">
+                      {courseLevels[selectedLevel].features.map((feature, index) => (
+                        <div key={index} className="flex items-start gap-3">
+                          <Check className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-8 mb-4">
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Duration</p>
+                        <p className="font-semibold">
+                          {selectedLevel === 0 ? "20hr 30m" :
+                           selectedLevel === 1 ? "35hr 45m" :
+                           selectedLevel === 2 ? "60hr 40m" :
+                           "90hr 20m"}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-8 mb-4">
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Duration</p>
-                      <p className="font-semibold">
-                        {selectedLevel === 0 ? "20hr 30m" :
-                         selectedLevel === 1 ? "35hr 45m" :
-                         selectedLevel === 2 ? "60hr 40m" :
-                         "90hr 20m"}
-                      </p>
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Lessons</p>
+                        <p className="font-semibold">
+                          {selectedLevel === 0 ? "28" :
+                           selectedLevel === 1 ? "42" :
+                           selectedLevel === 2 ? "84" :
+                           "120"} Lessons
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Lessons</p>
-                      <p className="font-semibold">
-                        {selectedLevel === 0 ? "28" :
-                         selectedLevel === 1 ? "42" :
-                         selectedLevel === 2 ? "84" :
-                         "120"} Lessons
-                      </p>
+                    <div className={`inline-block px-3 py-1 rounded-full text-sm ${
+                      selectedLevel === 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                      selectedLevel === 1 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
+                      selectedLevel === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' :
+                      'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                    }`}>
+                      {courseLevels[selectedLevel].title}
                     </div>
                   </div>
-                  <div className={`inline-block px-3 py-1 rounded-full text-sm ${
-                    selectedLevel === 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
-                    selectedLevel === 1 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
-                    selectedLevel === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' :
-                    'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                  }`}>
-                    {courseLevels[selectedLevel].title}
-                  </div>
-                </div>
 
-                {/* Right Column - Course Preview */}
-                <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
-                  <div className="mb-6">
-                    <h4 className="text-xl font-semibold mb-4">What you'll get</h4>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                          <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
+                  {/* Right Column - Course Preview */}
+                  <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
+                    <div className="mb-6">
+                      <h4 className="text-xl font-semibold mb-4">What you'll get</h4>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                            <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium">HD Video Lessons</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Clear and concise explanations</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">HD Video Lessons</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Clear and concise explanations</p>
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                            <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium">Hands-on Projects</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Build real-world applications</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                          <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                            <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium">Course Resources</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Code samples and materials</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">Hands-on Projects</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Build real-world applications</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                          <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="font-medium">Course Resources</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Code samples and materials</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                          <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="font-medium">Certificate</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Upon course completion</p>
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                            <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium">Certificate</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Upon course completion</p>
+                          </div>
                         </div>
                       </div>
                     </div>
+                    <button
+                      onClick={handleBuyCourse}
+                      className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
+                        selectedLevel === 0 ? 'bg-blue-600 hover:bg-blue-700' :
+                        selectedLevel === 1 ? 'bg-green-600 hover:bg-green-700' :
+                        selectedLevel === 2 ? 'bg-orange-600 hover:bg-orange-700' :
+                        'bg-purple-600 hover:bg-purple-700'
+                      }`}
+                    >
+                      Enroll Now - ₹{courseLevels[selectedLevel].price}
+                    </button>
                   </div>
-                  <button
-                    onClick={handleBuyCourse}
-                    className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
-                      selectedLevel === 0 ? 'bg-blue-600 hover:bg-blue-700' :
-                      selectedLevel === 1 ? 'bg-green-600 hover:bg-green-700' :
-                      selectedLevel === 2 ? 'bg-orange-600 hover:bg-orange-700' :
-                      'bg-purple-600 hover:bg-purple-700'
-                    }`}
-                  >
-                    Enroll Now - ₹{courseLevels[selectedLevel].price}
-                  </button>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Course Level Comparison */}
@@ -619,12 +612,12 @@ function CourseDetails() {
                 isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
               }`}>
                 <div className="flex-shrink-0">
-                  <img
-                    src={
-                      Educator.image
-                        ? Educator.image
-                        : `https://api.dicebear.com/5.x/initials/svg?seed=${Educator.firstName} ${Educator.lastName}`
-                    }
+                <img
+                  src={
+                    Educator.image
+                      ? Educator.image
+                      : `https://api.dicebear.com/5.x/initials/svg?seed=${Educator.firstName} ${Educator.lastName}`
+                  }
                     alt={`${Educator.firstName} ${Educator.lastName}`}
                     className="w-24 h-24 rounded-full object-cover"
                   />
@@ -755,7 +748,7 @@ function CourseDetails() {
                 Certificate recognized by top companies and industry experts
               </p>
             </div>
-
+            
             <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center gap-4 mb-4">
                 <div className={`p-3 rounded-full ${isDarkMode ? 'bg-purple-900' : 'bg-purple-100'}`}>

@@ -5,7 +5,7 @@ import { Outlet, useParams } from "react-router-dom"
 import CourseReviewModal from "../components/core/ViewCourse/CourseReviewModal"
 import VideoDetailsSidebar from "../components/core/ViewCourse/VideoDetailsSidebar.jsx";
 
-import { getFullDetailsOfCourse } from "../services/operations/courseDetailsAPI"
+import { getFullDetailsOfCourse } from "../services/operations/courseDetailsAPI.jsx"
 import {
   setCompletedLectures,
   setCourseSectionData,
