@@ -43,6 +43,56 @@ function CourseDetails() {
   const [response, setResponse] = useState(null)
   const [confirmationModal, setConfirmationModal] = useState(null)
 
+  // Default level descriptions and features
+  const defaultLevelData = {
+    "Beginner": {
+      subtitle: "Perfect for those just starting out",
+      features: [
+        "Basic Python syntax and data types",
+        "Control flow and functions",
+        "Simple data structures",
+        "Basic file handling",
+        "Certificate of completion"
+      ]
+    },
+    "Intermediate": {
+      subtitle: "For those with basic Python knowledge",
+      features: [
+        "Object-oriented programming",
+        "Advanced data structures",
+        "Error handling and debugging",
+        "Basic algorithms",
+        "Project-based learning",
+        "Certificate of completion"
+      ]
+    },
+    "Advanced": {
+      subtitle: "For experienced Python developers",
+      features: [
+        "Advanced OOP concepts",
+        "Design patterns",
+        "Testing and debugging",
+        "Performance optimization",
+        "Real-world projects",
+        "1-on-1 mentoring",
+        "Certificate of completion"
+      ]
+    },
+    "Expert": {
+      subtitle: "Master Python programming",
+      features: [
+        "Advanced algorithms",
+        "System design",
+        "Performance optimization",
+        "Security best practices",
+        "Industry projects",
+        "Career guidance",
+        "Lifetime access",
+        "Certificate of completion"
+      ]
+    }
+  };
+
   useEffect(() => {
     // Calling fetchCourseDetails function to fetch the details
     ;(async () => {
@@ -67,10 +117,10 @@ function CourseDetails() {
           
           setRelatedCourseLevels(allLevels);
           
-          // Create course level data
+          // Create course level data with default descriptions and features
           const formattedLevels = allLevels.map((course) => ({
             title: course.level,
-            subtitle: `${course.courseName} - ${course.level} Level`,
+            subtitle: defaultLevelData[course.level]?.subtitle || `${course.courseName} - ${course.level} Level`,
             price: course.price,
             duration: course.duration || "8 weeks",
             lessons: course.courseContent?.reduce((total, section) => 
@@ -78,7 +128,8 @@ function CourseDetails() {
             features: course.whatYouWillLearn ? 
               typeof course.whatYouWillLearn === 'string' ? 
                 course.whatYouWillLearn.split(',').map(item => item.trim()) :
-                course.whatYouWillLearn : [],
+                course.whatYouWillLearn :
+              defaultLevelData[course.level]?.features || [],
             _id: course._id,
             courseContent: course.courseContent || [],
             thumbnail: course.thumbnail,
