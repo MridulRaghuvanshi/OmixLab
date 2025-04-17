@@ -1,11 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { FaPlay } from 'react-icons/fa';
+import { FaPlay, FaTimes } from 'react-icons/fa';
 import { BsStars } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import { getUserDetails } from '../services/operations/profileAPI';
+import { apiConnector } from '../services/apiconnector';
+import { subscriptionEndpoints } from '../services/apis';
+
+// Function to load the Razorpay script
+const loadScript = (src) => {
+  return new Promise((resolve) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.onload = () => resolve(true);
+    script.onerror = () => {
+      script.remove();
+      resolve(false);
+    };
+    document.body.appendChild(script);
+  });
+};
 
 const Podcasts = () => {
   const { isDarkMode } = useTheme();
@@ -15,13 +35,14 @@ const Podcasts = () => {
   const { token } = useSelector((state) => state.auth);
   const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
+  const [showPodcastModal, setShowPodcastModal] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   // Refresh user data when component mounts or token changes
   useEffect(() => {
     const fetchUserData = async () => {
       if (!token) {
         setIsLoading(false);
-        navigate('/login');
         return;
       }
 
@@ -53,39 +74,307 @@ const Podcasts = () => {
   }, [user, token]);
 
   const handlePodcastPlanClick = () => {
-    navigate('/pricing');
-    // Scroll to Podcast Plan section after navigation
-    setTimeout(() => {
-      const podcastPlanSection = document.getElementById('podcast-plan-section');
-      if (podcastPlanSection) {
-        podcastPlanSection.scrollIntoView({ behavior: 'smooth' });
+    if (!token) {
+      toast.error("Please login first");
+      navigate("/login");
+      return;
+    }
+
+    // Check if user already has an active podcast subscription
+    if (user?.subscription?.status === "active" && 
+        (user?.subscription?.planName === "Podcast Plan" || 
+         user?.subscription?.planName === "Premium Plan")) {
+      toast((t) => (
+        <div className={`flex flex-col items-start gap-3 p-4 rounded-lg ${
+          isDarkMode ? 'bg-[#1C1F2E]' : 'bg-white'
+        } shadow-lg`}>
+          <div className="flex items-center gap-2">
+            <BsStars className="text-[#00FFB2] text-xl" />
+            <h3 className={`text-lg font-semibold ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>
+              Already Subscribed!
+            </h3>
+          </div>
+          <p className={`text-sm ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+          }`}>
+            You already have an active {user?.subscription?.planName}. You can access all podcast content.
+          </p>
+          <div className="flex gap-3 mt-2">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                navigate('/profile');
+              }}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                isDarkMode
+                  ? 'bg-[#00FFB2] text-[#0A0F1C] hover:bg-[#00FFB2]/90'
+                  : 'bg-[#00FFB2] text-gray-900 hover:bg-[#00FFB2]/90'
+              }`}
+            >
+              View Subscription
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                isDarkMode
+                  ? 'bg-gray-700 text-white hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+              }`}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      ), {
+        duration: 6000,
+        style: {
+          background: 'transparent',
+          boxShadow: 'none',
+          padding: 0,
+        },
+      });
+      return;
+    }
+
+    // If not subscribed, show the subscription modal
+    setShowPodcastModal(true);
+  };
+
+  const handlePodcastSubscription = async () => {
+    if (!token) {
+      toast.error("Please login first");
+      navigate("/login");
+      return;
+    }
+
+    if (user?.accountType === "Educator") {
+      toast.error("Educators cannot purchase podcast subscriptions");
+      return;
+    }
+
+    // Check if user already has an active podcast subscription
+    if (user?.subscription?.status === "active" && 
+        (user?.subscription?.planName === "Podcast Plan" || 
+         user?.subscription?.planName === "Premium Plan")) {
+      toast((t) => (
+        <div className={`flex flex-col items-start gap-3 p-4 rounded-lg ${
+          isDarkMode ? 'bg-[#1C1F2E]' : 'bg-white'
+        } shadow-lg`}>
+          <div className="flex items-center gap-2">
+            <BsStars className="text-[#00FFB2] text-xl" />
+            <h3 className={`text-lg font-semibold ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>
+              Already Subscribed!
+            </h3>
+          </div>
+          <p className={`text-sm ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+          }`}>
+            You already have an active {user?.subscription?.planName}. You can access all podcast content.
+          </p>
+          <div className="flex gap-3 mt-2">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                navigate('/profile');
+              }}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                isDarkMode
+                  ? 'bg-[#00FFB2] text-[#0A0F1C] hover:bg-[#00FFB2]/90'
+                  : 'bg-[#00FFB2] text-gray-900 hover:bg-[#00FFB2]/90'
+              }`}
+            >
+              View Subscription
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                isDarkMode
+                  ? 'bg-gray-700 text-white hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+              }`}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      ), {
+        duration: 6000,
+        style: {
+          background: 'transparent',
+          boxShadow: 'none',
+          padding: 0,
+        },
+      });
+      setShowPodcastModal(false);
+      return;
+    }
+
+    setPaymentLoading(true);
+    const toastId = toast.loading("Processing podcast subscription...");
+
+    try {
+      // Create podcast subscription data
+      const subscriptionData = {
+        planName: "Podcast Plan",
+        price: 199,
+        level: "Podcast",
+        type: "podcast"
+      };
+
+      // Create subscription order
+      const response = await apiConnector(
+        "POST",
+        subscriptionEndpoints.SUBSCRIPTION_API,
+        subscriptionData,
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to create subscription order");
       }
-    }, 100);
+
+      const { orderId, amount, currency } = response.data.data;
+
+      // Load Razorpay script
+      const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
+      if (!res) {
+        throw new Error("Razorpay SDK failed to load");
+      }
+
+      // Initialize Razorpay options
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_hKQBqNbBT98Kkw",
+        amount: amount,
+        currency: currency,
+        name: "OmixLab",
+        description: "Podcast Subscription Plan",
+        order_id: orderId,
+        prefill: {
+          name: user.firstName + " " + user.lastName,
+          email: user.email,
+        },
+        theme: {
+          color: "#00FFB2",
+          hide_topbar: false,
+          backdrop_color: isDarkMode ? "#0A0F1C" : "#f9fafb",
+        },
+        modal: {
+          confirm_close: true,
+          animation: true,
+        },
+        handler: async function (response) {
+          try {
+            const verifyData = {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            };
+
+            const verifyResponse = await apiConnector(
+              "POST",
+              subscriptionEndpoints.VERIFY_PAYMENT_API,
+              verifyData,
+              {
+                Authorization: `Bearer ${token}`,
+              }
+            );
+
+            if (!verifyResponse.data.success) {
+              throw new Error(verifyResponse.data.message || "Payment verification failed");
+            }
+
+            toast.success("Podcast subscription activated successfully!");
+            setShowPodcastModal(false);
+            
+            // Refresh user data to get updated subscription status
+            await dispatch(getUserDetails(token, navigate));
+          } catch (error) {
+            console.error("Payment verification error:", error);
+            toast.error(error.message || "Could not verify payment. Please contact support.");
+          }
+        }
+      };
+
+      // Initialize Razorpay
+      const razorpay = new window.Razorpay(options);
+      
+      // Handle payment failures
+      razorpay.on("payment.failed", function(response) {
+        console.error("Payment failed:", response.error);
+        toast.error(`Payment failed: ${response.error.description || "Unknown error"}`);
+      });
+
+      razorpay.on("modal.closed", function() {
+        toast.dismiss(toastId);
+      });
+
+      razorpay.open();
+
+    } catch (error) {
+      console.error("Subscription error:", error);
+      toast.error(error.message || "Failed to process subscription. Please try again.");
+    } finally {
+      setPaymentLoading(false);
+      toast.dismiss(toastId);
+    }
   };
 
   const showSubscriptionPrompt = () => {
     toast((t) => (
-      <div className="flex flex-col items-start gap-2">
-        <p>You need to purchase the Podcast Plan to access this content.</p>
-        <button
-          onClick={() => {
-            toast.dismiss(t.id);
-            navigate('/pricing#podcast-plan');
-          }}
-          className={`px-4 py-2 rounded-lg font-semibold ${
-            isDarkMode
-              ? 'bg-[#00FFB2] text-[#0A0F1C] hover:bg-[#00FFB2]/90'
-              : 'bg-[#00FFB2] text-gray-900 hover:bg-[#00FFB2]/90'
-          }`}
-        >
-          Subscribe Now
-        </button>
+      <div className={`flex flex-col items-start gap-3 p-4 rounded-lg ${
+        isDarkMode ? 'bg-[#1C1F2E]' : 'bg-white'
+      } shadow-lg`}>
+        <div className="flex items-center gap-2">
+          <BsStars className="text-[#00FFB2] text-xl" />
+          <h3 className={`text-lg font-semibold ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>
+            Premium Content
+          </h3>
+        </div>
+        <p className={`text-sm ${
+          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+        }`}>
+          Subscribe to our Podcast Plan to access this content and more!
+        </p>
+        <div className="flex gap-3 mt-2">
+          <button
+            onClick={() => {
+              toast.dismiss(t.id);
+              handlePodcastPlanClick();
+            }}
+            className={`px-4 py-2 rounded-lg font-medium ${
+              isDarkMode
+                ? 'bg-[#00FFB2] text-[#0A0F1C] hover:bg-[#00FFB2]/90'
+                : 'bg-[#00FFB2] text-gray-900 hover:bg-[#00FFB2]/90'
+            }`}
+          >
+            View Plans
+          </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className={`px-4 py-2 rounded-lg font-medium ${
+              isDarkMode
+                ? 'bg-gray-700 text-white hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+            }`}
+          >
+            Maybe Later
+          </button>
+        </div>
       </div>
     ), {
-      duration: 5000,
+      duration: 6000,
       style: {
-        background: isDarkMode ? '#1C1F2E' : 'white',
-        color: isDarkMode ? 'white' : 'black',
+        background: 'transparent',
+        boxShadow: 'none',
+        padding: 0,
       },
     });
   };
@@ -134,7 +423,7 @@ const Podcasts = () => {
   };
 
   const handlePlayPodcast = () => {
-    if (!user) {
+    if (!token) {
       toast.error("Please login to access podcasts");
       navigate("/login");
       return;
@@ -149,7 +438,7 @@ const Podcasts = () => {
   };
 
   const handleLatestEpisode = () => {
-    if (!user) {
+    if (!token) {
       toast.error("Please login to access podcasts");
       navigate("/login");
       return;
@@ -205,6 +494,66 @@ const Podcasts = () => {
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-[#0F1624]' : 'bg-white'}`}>
+      {/* Podcast Plan Modal */}
+      {showPodcastModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className={`relative rounded-xl p-6 max-w-md w-full ${
+            isDarkMode ? 'bg-[#1C1F2E]' : 'bg-white'
+          } shadow-xl`}>
+            <button
+              onClick={() => setShowPodcastModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-300"
+            >
+              <FaTimes size={24} />
+            </button>
+            
+            <h3 className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+              Podcast Plan
+            </h3>
+            
+            <div className="mb-6">
+              <div className="flex items-baseline gap-2">
+                <span className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>₹199</span>
+                <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>/year</span>
+              </div>
+              <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Cancel anytime
+              </p>
+            </div>
+
+            <ul className="space-y-3 mb-6">
+              {[
+                "Free resources",
+                "Early access to latest podcast episodes",
+                "10–15% discount on courses",
+                "Access to community groups",
+                "Podcast attendee badge",
+                "Workshop alumni access"
+              ].map((feature, index) => (
+                <li key={index} className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <svg className="w-5 h-5 mr-2 text-[#00FFB2]" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {feature}
+                </li>
+              ))}
+            </ul>
+
+            <button 
+              onClick={handlePodcastSubscription}
+              disabled={paymentLoading}
+              className={`w-full py-3 rounded-lg font-semibold transition-colors duration-300 ${
+                isDarkMode
+                  ? 'bg-[#00FFB2] text-[#0A0F1C] hover:bg-[#00FFB2]/90'
+                  : 'bg-[#00FFB2] text-gray-900 hover:bg-[#00FFB2]/90'
+              }`}
+            >
+              {paymentLoading ? 'Processing...' : 'Get Started'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="container mx-auto px-4 pt-16 pb-12">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-8">

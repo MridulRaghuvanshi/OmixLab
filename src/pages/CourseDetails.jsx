@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react"
 import { BiInfoCircle } from "react-icons/bi"
 import { HiOutlineGlobeAlt } from "react-icons/hi"
-// import { ReactMarkdown } from "react-markdown/lib/react-markdown"
-import ReactMarkdown from "react-markdown";
+import { Check } from "lucide-react"
+import ReactMarkdown from "react-markdown"
 import { Player, BigPlayButton } from "video-react"
 import "video-react/dist/video-react.css"
 
 import { useDispatch, useSelector } from "react-redux"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, Link } from "react-router-dom"
 
 import ConfirmationModal from "../components/common/ConfirmationModal"
 import Footer from "../components/common/Footer"
@@ -20,6 +20,9 @@ import { buyCourse } from "../services/operations/studentFeaturesAPI"
 import GetAvgRating from "../utils/avgRating"
 import Error from "./Error"
 import { toast } from "react-hot-toast"
+import { useTheme } from "../context/ThemeContext"
+import Chatbot from "../components/common/Chatbot"
+import { logout } from "../services/operations/authAPI"
 
 function CourseDetails() {
   const { user } = useSelector((state) => state.profile)
@@ -28,10 +31,13 @@ function CourseDetails() {
   const { paymentLoading } = useSelector((state) => state.course)
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const { isDarkMode } = useTheme()
 
   // Getting courseId from url parameter
   const { courseId } = useParams()
-  // console.log(`course id: ${courseId}`)
+  
+  // State for selected course level
+  const [selectedLevel, setSelectedLevel] = useState(0)
 
   // Declear a state to save the course details
   const [response, setResponse] = useState(null)
@@ -81,6 +87,71 @@ function CourseDetails() {
     setTotalNoOfLectures(lectures)
   }, [response])
 
+  const courseLevels = [
+    {
+      title: "Beginner",
+      subtitle: "Perfect for those just starting out",
+      price: 499,
+      duration: "4 weeks",
+      lessons: 12,
+      features: [
+        "Basic Python syntax and data types",
+        "Control flow and functions",
+        "Simple data structures",
+        "Basic file handling",
+        "Certificate of completion"
+      ]
+    },
+    {
+      title: "Intermediate",
+      subtitle: "For those with basic Python knowledge",
+      price: 999,
+      duration: "8 weeks",
+      lessons: 24,
+      features: [
+        "Object-oriented programming",
+        "Advanced data structures",
+        "Error handling and debugging",
+        "Basic algorithms",
+        "Project-based learning",
+        "Certificate of completion"
+      ]
+    },
+    {
+      title: "Advanced",
+      subtitle: "For experienced Python developers",
+      price: 1499,
+      duration: "12 weeks",
+      lessons: 36,
+      features: [
+        "Advanced OOP concepts",
+        "Design patterns",
+        "Testing and debugging",
+        "Performance optimization",
+        "Real-world projects",
+        "1-on-1 mentoring",
+        "Certificate of completion"
+      ]
+    },
+    {
+      title: "Expert",
+      subtitle: "Master Python programming",
+      price: 2499,
+      duration: "16 weeks",
+      lessons: 48,
+      features: [
+        "Advanced algorithms",
+        "System design",
+        "Performance optimization",
+        "Security best practices",
+        "Industry projects",
+        "Career guidance",
+        "Lifetime access",
+        "Certificate of completion"
+      ]
+    }
+  ];
+
   if (loading || !response) {
     return (
       <div className="grid min-h-[calc(100vh-3.5rem)] place-items-center">
@@ -106,32 +177,25 @@ function CourseDetails() {
     createdAt,
   } = response.data?.courseDetails
 
-  const handleBuyCourse = () => {
-    if (user?.accountType === "Educator") {
-      toast.error("As an educator, you cannot purchase courses. You can only create and manage courses.");
+  const handleBuyCourse = async () => {
+    if (!user) {
+      toast.error("Please login to purchase the course");
+      navigate("/login");
       return;
     }
 
-    console.log("Course being sent to buyCourse:", courseId);
-
-    if (!courseId) {
-      console.error("courseId is undefined!");
-      return toast.error("Course ID is missing.");
-    }
-
-    if (token) {
-      buyCourse(token, [courseId], user, navigate, dispatch, price);
+    if (!token) {
+      toast.error("Please login first");
+      navigate("/login");
       return;
     }
 
-    setConfirmationModal({
-      text1: "You are not logged in!",
-      text2: "Please login to Purchase Course.",
-      btn1Text: "Login",
-      btn2Text: "Cancel",
-      btn1Handler: () => navigate("/login"),
-      btn2Handler: () => setConfirmationModal(null),
-    });
+    try {
+      await buyCourse(token, [course_id], user, navigate, dispatch, courseLevels[selectedLevel].price);
+    } catch (error) {
+      console.error("Error in handleBuyCourse:", error);
+      toast.error("Failed to process purchase. Please try again.");
+    }
   };
 
   if (paymentLoading) {
@@ -144,113 +208,103 @@ function CourseDetails() {
   }
 
   return (
-    <>
-      {/* <div className={`relative w-full bg-gray-800`}> */}
-      <div className={`relative w-full bg-[rgb(24,24,27)]`}>
-
-        {/* Hero Section */}
-        <div className="mx-auto box-content px-4 lg:w-[1260px] 2xl:relative ">
-          <div className="mx-auto grid min-h-[450px] max-w-maxContentTab justify-items-center py-8 lg:mx-0 lg:justify-items-start lg:py-0 xl:max-w-[810px]">
-            <div className="relative block max-h-[30rem] lg:hidden">
-              <div className="absolute bottom-0 left-0 h-full w-full shadow-[#161D29_0px_-64px_36px_-28px_inset]"></div>
-              <img
-                src={thumbnail}
-                alt="course thumbnail"
-                className="aspect-auto w-full"
-              />
-            </div>
-            <div
-              className={`z-30 my-5 flex flex-col justify-center gap-4 py-5 text-lg text-[rgb(244,244,245)]`}
-            >
-
-              <div>
-                <p className="text-4xl font-bold text-[rgb(244,244,245)] sm:text-[42px]">
-                  {courseName}
-                </p>
-              </div>
-              <p className={`text-[rgb(161,161,170)]`}>{courseDescription}</p>
-              
-              {/* Meet Your Educator Section - Moved here */}
-              {response.data?.courseDetails.introVideo && (
-                <div className="py-4">
-                  <p className="text-[28px] font-semibold mb-4">Meet Your Educator</p>
-                  <div className="w-full aspect-video">
-                    <Player 
-                      aspectRatio="16:9" 
-                      playsInline 
-                      src={response.data?.courseDetails.introVideo}
-                    >
-                      <BigPlayButton position="center" />
-                    </Player>
-                  </div>
-                </div>
-              )}
-              
-              <div className="text-md flex flex-wrap items-center gap-2">
-                <span className="text-yellow-25">{avgReviewCount}</span>
-                <RatingStars Review_Count={avgReviewCount} Star_Size={24} />
-                <span>{`(${ratingAndReviews.length} reviews)`}</span>
-                <span>{`${studentsEnrolled.length} students enrolled`}</span>
-              </div>
-              <div>
-                <p className="">
-                  Created By {`${Educator.firstName} ${Educator.lastName}`}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-5 text-lg">
-                <p className="flex items-center gap-2">
-                  {" "}
-                  <BiInfoCircle /> Created at {formatDate(createdAt)}
-                </p>
-                <p className="flex items-center gap-2">
-                  {" "}
-                  <HiOutlineGlobeAlt /> English
-                </p>
-              </div>
-            </div>
-            <div className="flex w-full flex-col gap-4 border-y border-y-[rgb(39,39,42)] py-4 lg:hidden">
-              <p className="space-x-3 pb-4 text-3xl font-semibold text-[rgb(244,244,245)]">
-                Rs. {price}
-              </p>
-              <button className="yellowButton" onClick={handleBuyCourse}>
-                Buy Now
-              </button>
-              <button className="blackButton">Add to Cart</button>
-            </div>
+    <div className={`w-full ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}>
+      {/* Header/Navigation Breadcrumb */}
+      <div className="bg-blue-600 py-8 text-white">
+        <div className="mx-auto w-11/12 max-w-maxContent">
+          <div className="flex items-center text-sm mb-4">
+            <Link to="/" className="hover:underline">Home</Link>
+            <span className="mx-2">/</span>
+            <Link to="/courses" className="hover:underline">Courses</Link>
+            <span className="mx-2">/</span>
+            <span>{courseName}</span>
           </div>
-          {/* Courses Card */}
-          <div className="right-[1rem] top-[60px] mx-auto hidden min-h-[600px] w-1/3 max-w-[410px] translate-y-24 md:translate-y-0 lg:absolute  lg:block">
-            <CourseDetailsCard
-              course={response?.data?.courseDetails}
-              setConfirmationModal={setConfirmationModal}
-              handleBuyCourse={handleBuyCourse}
-            />
-          </div>
+          <h1 className="text-4xl font-bold">{courseName}</h1>
         </div>
       </div>
-      <div className="mx-auto box-content px-4 text-start text-[rgb(244,244,245)] lg:w-[1260px]">
-        <div className="mx-auto max-w-maxContentTab lg:mx-0 xl:max-w-[810px]">
-          {/* What will you learn section */}
-          <div className="my-8 border border-[rgb(82,82,91)] p-8">
-            <p className="text-3xl font-semibold">What you'll learn</p>
-            <div className="mt-5">
-              <ReactMarkdown>{whatYouWillLearn}</ReactMarkdown>
-            </div>
-          </div>
 
-          {/* Course Content Section */}
-          <div className="max-w-[830px] ">
-            <div className="flex flex-col gap-3">
-              <p className="text-[28px] font-semibold">Course Content</p>
-              <div className="flex flex-wrap justify-between gap-2">
+      {/* Course Details Section */}
+      <div className="mx-auto w-11/12 max-w-maxContent py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Course Info */}
+          <div className="lg:col-span-2">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold mb-4">Course Details</h2>
+              <p className="text-lg mb-6">
+                Master Python programming from the ground up with our comprehensive course. Whether you're a complete beginner or 
+                an experienced developer looking to advance your skills, we offer four distinct learning paths to match your experience 
+                level and goals.
+              </p>
+              <p className="text-lg">
+                Python is one of the most popular programming languages used in data science, machine learning, web development, 
+                automation, and more. Our course is designed by industry experts to provide you with practical skills that are in high 
+                demand.
+              </p>
+            </div>
+
+            {/* Video Preview */}
+            <div className="mb-8 relative w-full aspect-video rounded-lg overflow-hidden">
+              {console.log("Video URL:", response?.data?.courseDetails?.introVideo)}
+              <Player
+                playsInline
+                poster={thumbnail}
+                src={response?.data?.courseDetails?.introVideo}
+                className="rounded-lg w-full h-full object-cover"
+                fluid={true}
+                aspectRatio="auto"
+              >
+                <BigPlayButton position="center" />
+              </Player>
+            </div>
+
+            {/* Course Stats */}
+            <div className="flex items-center gap-6 mb-8">
+              <div className="flex items-center gap-2">
+                <RatingStars Review_Count={avgReviewCount} />
+                <span>({ratingAndReviews?.length} reviews)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <HiOutlineGlobeAlt />
+                <span>English</span>
+              </div>
+              <div>
+                <span>{totalNoOfLectures} total lectures</span>
+              </div>
+            </div>
+
+            {/* What You'll Learn Section */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-6">What You'll Learn</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Array.isArray(whatYouWillLearn) ? (
+                  whatYouWillLearn.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-start gap-3 p-4 rounded-lg ${
+                        isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+                      }`}
+                    >
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <p>{item}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className={`col-span-2 p-4 rounded-lg ${
+                    isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+                  }`}>
+                    <p>Course learning outcomes will be available soon.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Course Content Section */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-6">Course Content</h2>
+              <div className="flex flex-wrap justify-between gap-2 mb-4">
                 <div className="flex gap-2">
-                  <span>
-                    {courseContent.length} {`section(s)`}
-                  </span>
-                  <span>
-                    {totalNoOfLectures} {`lecture(s)`}
-                  </span>
-                  <span>{response.data?.totalDuration} total length</span>
+                  <span>{courseContent?.length} section(s)</span>
+                  <span>{totalNoOfLectures} lecture(s)</span>
                 </div>
                 <div>
                   <button
@@ -261,46 +315,469 @@ function CourseDetails() {
                   </button>
                 </div>
               </div>
-            </div>
-
-            {/* Course Details Accordion */}
-            <div className="py-4">
-              {courseContent?.map((course, index) => (
-                <CourseAccordionBar
-                  course={course}
-                  key={index}
-                  isActive={isActive}
-                  handleActive={handleActive}
-                />
-              ))}
-            </div>
-
-            {/* Author Details */}
-            <div className="mb-12 py-4">
-              <p className="text-[28px] font-semibold">Author</p>
-              <div className="flex items-center gap-4 py-4">
-                <img
-                  src={
-                    Educator.image
-                      ? Educator.image
-                      : `https://api.dicebear.com/5.x/initials/svg?seed=${Educator.firstName} ${Educator.lastName}`
-                  }
-                  alt="Author"
-                  className="h-14 w-14 rounded-full object-cover"
-                />
-                <p className="text-lg">{`${Educator.firstName} ${Educator.lastName}`}</p>
+              <div className="py-4">
+                {courseContent?.map((course, index) => (
+                  <CourseAccordionBar
+                    course={course}
+                    key={index}
+                    isActive={isActive}
+                    handleActive={handleActive}
+                  />
+                ))}
               </div>
-              <p className="text-[rgb(250,250,250)]">
-                {Educator?.additionalDetails?.about}
-              </p>
             </div>
-            
+
+            {/* Course Requirements Section */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-6">Course Requirements</h2>
+              <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <ul className="list-disc pl-6 space-y-3">
+                  <li>Basic understanding of computer operations</li>
+                  <li>No prior programming experience needed for beginner level</li>
+                  <li>A computer with internet connection</li>
+                  <li>Willingness to learn and practice</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Course Benefits Section */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-6">Course Benefits</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <h3 className="text-xl font-semibold mb-4">Career Opportunities</h3>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>Industry-recognized certification</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>Portfolio-ready projects</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>Job placement assistance</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <h3 className="text-xl font-semibold mb-4">Learning Support</h3>
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>24/7 Discord community access</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>Weekly live Q&A sessions</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-500 mt-1" />
+                      <span>1-on-1 mentoring sessions</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Choose Your Skill Level Section */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-4">Choose Your Skill Level</h2>
+              <p className="text-lg mb-8">
+                Select the appropriate skill level to accelerate your Python journey. Each tier builds upon the previous one, allowing you to progress at your own pace.
+              </p>
+
+              {/* Skill Level Navigation */}
+              <div className={`flex mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg overflow-hidden`}>
+                {courseLevels.map((level, index) => (
+                  <button
+                    key={index}
+                    className={`flex-1 py-3 px-4 text-center transition-colors ${
+                      index === selectedLevel
+                        ? isDarkMode ? 'bg-gray-700 shadow-md' : 'bg-white shadow-md'
+                        : isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                    }`}
+                    onClick={() => setSelectedLevel(index)}
+                  >
+                    {level.title}
+                  </button>
+                ))}
+              </div>
+
+              {/* Course Level Details */}
+              <div className={`grid md:grid-cols-2 gap-8 ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50'} rounded-lg p-8 mb-8`}>
+                {/* Left Column - Course Details */}
+                <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
+                  <h3 className="text-2xl font-bold mb-2">
+                    {courseLevels[selectedLevel].title === "Beginner" 
+                      ? `${courseName} for Beginners`
+                      : courseLevels[selectedLevel].title === "Intermediate"
+                      ? `Intermediate ${courseName}`
+                      : courseLevels[selectedLevel].title === "Advanced"
+                      ? `Advanced ${courseName}`
+                      : `${courseName} Expert Specialization`}
+                  </h3>
+                  <p className="text-lg mb-6">
+                    {selectedLevel === 0 
+                      ? `Perfect for those with no prior ${courseName} experience. Learn fundamentals, basic syntax, and start building simple applications.`
+                      : selectedLevel === 1
+                      ? `For those with basic ${courseName} knowledge. Deepen your skills and learn more advanced concepts.`
+                      : selectedLevel === 2
+                      ? `For experienced programmers. Master complex ${courseName} concepts and build sophisticated applications.`
+                      : `For professional developers seeking mastery. Focus on specialized domains and cutting-edge ${courseName} applications.`}
+                  </p>
+                  <div className="grid gap-4 mb-6">
+                    {courseLevels[selectedLevel].features.map((feature, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <Check className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-8 mb-4">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Duration</p>
+                      <p className="font-semibold">
+                        {selectedLevel === 0 ? "20hr 30m" :
+                         selectedLevel === 1 ? "35hr 45m" :
+                         selectedLevel === 2 ? "60hr 40m" :
+                         "90hr 20m"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Lessons</p>
+                      <p className="font-semibold">
+                        {selectedLevel === 0 ? "28" :
+                         selectedLevel === 1 ? "42" :
+                         selectedLevel === 2 ? "84" :
+                         "120"} Lessons
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`inline-block px-3 py-1 rounded-full text-sm ${
+                    selectedLevel === 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                    selectedLevel === 1 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
+                    selectedLevel === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' :
+                    'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                  }`}>
+                    {courseLevels[selectedLevel].title}
+                  </div>
+                </div>
+
+                {/* Right Column - Course Preview */}
+                <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
+                  <div className="mb-6">
+                    <h4 className="text-xl font-semibold mb-4">What you'll get</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium">HD Video Lessons</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Clear and concise explanations</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium">Hands-on Projects</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Build real-world applications</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium">Course Resources</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Code samples and materials</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium">Certificate</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Upon course completion</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleBuyCourse}
+                    className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
+                      selectedLevel === 0 ? 'bg-blue-600 hover:bg-blue-700' :
+                      selectedLevel === 1 ? 'bg-green-600 hover:bg-green-700' :
+                      selectedLevel === 2 ? 'bg-orange-600 hover:bg-orange-700' :
+                      'bg-purple-600 hover:bg-purple-700'
+                    }`}
+                  >
+                    Enroll Now - ₹{courseLevels[selectedLevel].price}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Course Level Comparison */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-6">Course Level Comparison</h2>
+              <div className="overflow-x-auto">
+                <table className={`w-full ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  <thead>
+                    <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <th className="py-4 px-6 text-left">Features</th>
+                      {courseLevels.map((level, index) => (
+                        <th key={index} className="py-4 px-6 text-left">{level.title}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <td className="py-4 px-6">Price</td>
+                      {courseLevels.map((level, index) => (
+                        <td key={index} className="py-4 px-6">₹{level.price}</td>
+                      ))}
+                    </tr>
+                    <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <td className="py-4 px-6">Duration</td>
+                      {courseLevels.map((level, index) => (
+                        <td key={index} className="py-4 px-6">{level.duration}</td>
+                      ))}
+                    </tr>
+                    <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <td className="py-4 px-6">Lessons</td>
+                      {courseLevels.map((level, index) => (
+                        <td key={index} className="py-4 px-6">{level.lessons}</td>
+                      ))}
+                    </tr>
+                    <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <td className="py-4 px-6">Skill Level</td>
+                      {courseLevels.map((level, index) => (
+                        <td key={index} className="py-4 px-6">
+                          {index === 0 && 'No experience needed'}
+                          {index === 1 && 'Basic programming knowledge'}
+                          {index === 2 && 'Experienced programmers'}
+                          {index === 3 && 'Professional developers'}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <td className="py-4 px-6">Projects</td>
+                      {courseLevels.map((level, index) => (
+                        <td key={index} className="py-4 px-6">
+                          {index === 0 && '3 small projects'}
+                          {index === 1 && '5 medium projects'}
+                          {index === 2 && '8 complex projects'}
+                          {index === 3 && '10 industry-level projects'}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <td className="py-4 px-6">Support</td>
+                      {courseLevels.map((level, index) => (
+                        <td key={index} className="py-4 px-6">
+                          {index === 0 && 'Forum access'}
+                          {index === 1 && 'Forum + email support'}
+                          {index === 2 && 'Forum + priority support'}
+                          {index === 3 && '24/7 dedicated support'}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <td className="py-4 px-6">Career Benefits</td>
+                      {courseLevels.map((level, index) => (
+                        <td key={index} className="py-4 px-6">
+                          {index === 0 && 'Basic portfolio projects'}
+                          {index === 1 && 'Github portfolio setup'}
+                          {index === 2 && 'Resume review & LinkedIn profile'}
+                          {index === 3 && 'Job placement assistance'}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Meet Your Educator Section */}
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold mb-6">Meet Your Educator</h2>
+              <div className={`flex flex-col md:flex-row items-start gap-6 p-6 rounded-lg ${
+                isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+              }`}>
+                <div className="flex-shrink-0">
+                  <img
+                    src={
+                      Educator.image
+                        ? Educator.image
+                        : `https://api.dicebear.com/5.x/initials/svg?seed=${Educator.firstName} ${Educator.lastName}`
+                    }
+                    alt={`${Educator.firstName} ${Educator.lastName}`}
+                    className="w-24 h-24 rounded-full object-cover"
+                  />
+                </div>
+                <div className="flex-grow">
+                  <h3 className="text-xl font-bold mb-2">
+                    {Educator.firstName} {Educator.lastName}
+                  </h3>
+                  <p className="text-sm mb-2">{Educator?.additionalDetails?.designation || "Course Instructor"}</p>
+                  <p className="text-sm mb-4">{Educator?.additionalDetails?.experience || "5+"} years of experience</p>
+                  <p className="text-sm">{Educator?.additionalDetails?.about || "Experienced educator passionate about teaching and helping students achieve their learning goals."}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {Educator?.additionalDetails?.expertise?.map((skill, index) => (
+                      <span
+                        key={index}
+                        className={`px-3 py-1 rounded-full text-sm ${
+                          isDarkMode 
+                            ? 'bg-gray-700 text-gray-300' 
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {skill}
+                      </span>
+                    )) || (
+                      <span className={`px-3 py-1 rounded-full text-sm ${
+                        isDarkMode 
+                          ? 'bg-gray-700 text-gray-300' 
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {courseName}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="lg:col-span-1">
+            {/* FAQ Section */}
+            <div className={`sticky top-4 space-y-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+                <h2 className="text-xl font-bold mb-4">Frequently Asked Questions</h2>
+                <div className="space-y-4">
+                  <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                    <h3 className="text-lg font-semibold mb-2">How long do I have access to the course?</h3>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      You get lifetime access to the course content, including all future updates.
+                    </p>
+                  </div>
+                  <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                    <h3 className="text-lg font-semibold mb-2">Is there a certificate upon completion?</h3>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Yes, you'll receive a certificate of completion after finishing the course.
+                    </p>
+                  </div>
+                  <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                    <h3 className="text-lg font-semibold mb-2">What if I'm not satisfied with the course?</h3>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      We offer a 30-day money-back guarantee if you're not satisfied with the course.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chatbot Component */}
+              <Chatbot />
+            </div>
           </div>
         </div>
+
+        {/* Student Testimonials Section */}
+        <div className="mt-16 mb-12">
+          <h2 className="text-2xl font-bold mb-8">What Our Students Say</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ratingAndReviews?.slice(0, 3).map((review, index) => (
+              <div key={index} className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+                <div className="flex items-center gap-4 mb-4">
+                  <img
+                    src={review?.user?.image || `https://api.dicebear.com/5.x/initials/svg?seed=${review?.user?.firstName} ${review?.user?.lastName}`}
+                    alt={review?.user?.firstName}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                  <div>
+                    <h4 className="font-semibold">{review?.user?.firstName} {review?.user?.lastName}</h4>
+                    <div className="flex items-center">
+                      <RatingStars Review_Count={review?.rating} />
+                    </div>
+                  </div>
+                </div>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {review?.review || "This course has been incredibly helpful in advancing my programming skills."}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Course Highlights Section */}
+        <div className="mb-16">
+          <h2 className="text-2xl font-bold mb-8">Course Highlights</h2>
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`p-3 rounded-full ${isDarkMode ? 'bg-blue-900' : 'bg-blue-100'}`}>
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold">Comprehensive Curriculum</h3>
+              </div>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Structured learning path with practical examples and real-world applications
+              </p>
+            </div>
+
+            <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`p-3 rounded-full ${isDarkMode ? 'bg-green-900' : 'bg-green-100'}`}>
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold">Industry Recognition</h3>
+              </div>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Certificate recognized by top companies and industry experts
+              </p>
+            </div>
+
+            <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`p-3 rounded-full ${isDarkMode ? 'bg-purple-900' : 'bg-purple-100'}`}>
+                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold">Community Support</h3>
+              </div>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Join a thriving community of learners and industry professionals
+              </p>
+            </div>
+          </div>
+        </div>
+
       </div>
+
+      {/* Footer */}
       <Footer />
       {confirmationModal && <ConfirmationModal modalData={confirmationModal} />}
-    </>
+    </div>
   )
 }
 
