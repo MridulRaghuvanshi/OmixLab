@@ -9,7 +9,7 @@ import {
   addCourseDetails,
   editCourseDetails,
   fetchCourseCategories,
-} from "../../../../../services/operations/courseDetailsAPI"
+} from "../../../../../services/operations/courseDetailsAPI.jsx"
 import { setCourse, setStep } from "../../../../../slices/courseSlice"
 import { COURSE_STATUS } from "../../../../../utils/constants"
 import IconBtn from "../../../../common/IconBtn"
@@ -31,6 +31,7 @@ export default function CourseInformationForm() {
   const { course, editCourse } = useSelector((state) => state.course)
   const [loading, setLoading] = useState(false)
   const [courseCategories, setCourseCategories] = useState([])
+  const [coursePrice, setCoursePrice] = useState("499")
 
   useEffect(() => {
     const getCategories = async () => {
@@ -55,11 +56,32 @@ export default function CourseInformationForm() {
       setValue("courseImage", course.thumbnail)
       setValue("introVideo", course.introVideo)
       setValue("courseLevel", course.level)
+      // Set initial price based on level
+      const levelPrices = {
+        "Beginner": "499",
+        "Intermediate": "999",
+        "Advanced": "1499",
+        "Expert": "2499"
+      }
+      setCoursePrice(levelPrices[course.level] || "499")
     }
     getCategories()
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Add handler for level change
+  const handleLevelChange = (e) => {
+    const level = e.target.value
+    const levelPrices = {
+      "Beginner": "499",
+      "Intermediate": "999",
+      "Advanced": "1499",
+      "Expert": "2499"
+    }
+    setCoursePrice(levelPrices[level])
+    setValue("coursePrice", levelPrices[level])
+  }
 
   const isFormUpdated = () => {
     const currentValues = getValues()
@@ -208,6 +230,32 @@ export default function CourseInformationForm() {
           </span>
         )}
       </div>
+      {/* Course Level - Moved before price */}
+      <div className="flex flex-col space-y-2">
+        <label className="text-sm text-black" htmlFor="courseLevel">
+          Course Level <sup className="text-pink-200">*</sup>
+        </label>
+        <select
+          {...register("courseLevel", { required: true })}
+          defaultValue=""
+          id="courseLevel"
+          className="form-style w-full"
+          onChange={handleLevelChange}
+        >
+          <option value="" disabled>
+            Choose Course Level
+          </option>
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate">Intermediate</option>
+          <option value="Advanced">Advanced</option>
+          <option value="Expert">Expert</option>
+        </select>
+        {errors.courseLevel && (
+          <span className="ml-2 text-xs tracking-wide text-pink-200">
+            Course Level is required
+          </span>
+        )}
+      </div>
       {/* Course Price */}
       <div className="flex flex-col space-y-2">
         <label className="text-sm text-black" htmlFor="coursePrice">
@@ -216,7 +264,8 @@ export default function CourseInformationForm() {
         <div className="relative">
           <input
             id="coursePrice"
-            placeholder="Enter Course Price"
+            value={coursePrice}
+            readOnly
             {...register("coursePrice", {
               required: true,
               valueAsNumber: true,
@@ -224,9 +273,10 @@ export default function CourseInformationForm() {
                 value: /^(0|[1-9]\d*)(\.\d+)?$/,
               },
             })}
-            className="form-style w-full !pl-12"
+            className="form-style w-full !pl-12 border-gray-300 text-black dark:text-white"
+            style={{ backgroundColor: 'transparent' }}
           />
-          <HiOutlineCurrencyRupee className="absolute left-3 top-1/2 inline-block -translate-y-1/2 text-2xl text-black" />
+          <HiOutlineCurrencyRupee className="absolute left-3 top-1/2 inline-block -translate-y-1/2 text-2xl text-black dark:text-white" />
         </div>
         {errors.coursePrice && (
           <span className="ml-2 text-xs tracking-wide text-pink-200">
@@ -258,31 +308,6 @@ export default function CourseInformationForm() {
         {errors.courseCategory && (
           <span className="ml-2 text-xs tracking-wide text-pink-200">
             Course Category is required
-          </span>
-        )}
-      </div>
-      {/* Course Level */}
-      <div className="flex flex-col space-y-2">
-        <label className="text-sm text-black" htmlFor="courseLevel">
-          Course Level <sup className="text-pink-200">*</sup>
-        </label>
-        <select
-          {...register("courseLevel", { required: true })}
-          defaultValue=""
-          id="courseLevel"
-          className="form-style w-full"
-        >
-          <option value="" disabled>
-            Choose Course Level
-          </option>
-          <option value="Beginner">Beginner</option>
-          <option value="Intermediate">Intermediate</option>
-          <option value="Advanced">Advanced</option>
-          <option value="Expert">Expert</option>
-        </select>
-        {errors.courseLevel && (
-          <span className="ml-2 text-xs tracking-wide text-pink-200">
-            Course Level is required
           </span>
         )}
       </div>

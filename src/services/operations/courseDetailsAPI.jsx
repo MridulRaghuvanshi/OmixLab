@@ -405,15 +405,18 @@ export const fetchRelatedCourseLevels = async (courseName, educatorId, currentCo
       {
         courseName,
         educatorId,
-        currentCourseId,
+        currentCourseId
       },
       {
         Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       }
     );
 
+    console.log("FETCH_RELATED_COURSES_API RESPONSE............", response);
+
     if (!response?.data?.success) {
-      throw new Error("Could not fetch related courses");
+      throw new Error(response?.data?.message || "Could not fetch related courses");
     }
 
     // Sort levels by difficulty
@@ -425,8 +428,12 @@ export const fetchRelatedCourseLevels = async (courseName, educatorId, currentCo
     return sortedLevels;
   } catch (error) {
     console.log("FETCH_RELATED_COURSES_API ERROR............", error);
-    toast.error(error.message);
-    return [];
+    if (error?.response?.status === 401) {
+      toast.error("Please login to view related courses");
+    } else {
+      toast.error(error?.response?.data?.message || "Error fetching related courses");
+    }
+    return null;
   } finally {
     toast.dismiss(toastId);
   }
