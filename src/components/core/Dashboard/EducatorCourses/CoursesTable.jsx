@@ -14,7 +14,7 @@ import { formatDate } from "../../../../services/formatDate"
 import {
   deleteCourse,
   fetchEducatorCourses,
-} from "../../../../services/operations/courseDetailsAPI"
+} from "../../../../services/operations/courseDetailsAPI.jsx"
 import { COURSE_STATUS } from "../../../../utils/constants"
 import ConfirmationModal from "../../../common/ConfirmationModal"
 
