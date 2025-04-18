@@ -33,12 +33,15 @@ function CourseDetails() {
   const navigate = useNavigate()
   const { isDarkMode } = useTheme()
 
+  // Add loading state
+  const [isLoading, setIsLoading] = useState(true)
+
   // Getting courseId from url parameter
   const { courseId } = useParams()
 
   // State for selected course level
-  const [selectedLevel, setSelectedLevel] = useState(0)
-  const [relatedCourseLevels, setRelatedCourseLevels] = useState([])
+  const [selectedLevel, setSelectedLevel] = useState(null)
+  const [availableLevels, setAvailableLevels] = useState([])
   const [courseLevels, setCourseLevels] = useState([])
   const [response, setResponse] = useState(null)
   const [confirmationModal, setConfirmationModal] = useState(null)
@@ -93,61 +96,120 @@ function CourseDetails() {
     }
   };
 
+  // Add this helper function near the top of the component
+  const getLevelPrice = (level) => {
+    const prices = {
+      "Beginner": 499,
+      "Intermediate": 999,
+      "Advanced": 1499,
+      "Expert": 2499
+    };
+    return prices[level] || 499;
+  };
+
+  // Add this helper function at the top of the component
+  const getLevelInfo = (level, courseName) => {
+    const info = {
+      "Beginner": {
+        description: `Perfect for those with no prior ${courseName} experience. Learn fundamentals, basic syntax, and start building simple applications.`,
+        duration: "20hr 30m",
+        lessons: "28 Lessons"
+      },
+      "Intermediate": {
+        description: `For those with basic ${courseName} knowledge. Deepen your skills and learn more advanced concepts.`,
+        duration: "35hr 45m",
+        lessons: "42 Lessons"
+      },
+      "Advanced": {
+        description: `For experienced programmers. Master complex ${courseName} concepts and build sophisticated applications.`,
+        duration: "60hr 40m",
+        lessons: "84 Lessons"
+      },
+      "Expert": {
+        description: `For professional developers seeking mastery. Focus on specialized domains and cutting-edge ${courseName} applications.`,
+        duration: "90hr 20m",
+        lessons: "120 Lessons"
+      }
+    };
+    return info[level] || info["Beginner"];
+  };
+
   useEffect(() => {
-    // Calling fetchCourseDetails function to fetch the details
-    ;(async () => {
+    const fetchDetails = async () => {
+      setIsLoading(true)
       try {
-        const res = await fetchCourseDetails(courseId)
-        setResponse(res)
+        const courseData = await fetchCourseDetails(courseId)
+        setResponse(courseData)
         
-        if (res?.data?.courseDetails) {
-          const courseDetails = res.data.courseDetails;
+        if (courseData?.data?.courseDetails) {
+          const courseDetails = courseData.data.courseDetails
+          
+          // Fetch related levels
           const relatedLevels = await fetchRelatedCourseLevels(
             courseDetails.courseName,
             courseDetails.Educator._id,
             courseId,
             token
-          );
+          )
+
+          // Combine and sort all levels
+          const allLevels = [...relatedLevels]
           
-          // Combine current course with related levels and sort by level
-          const allLevels = [courseDetails, ...(relatedLevels || [])].sort((a, b) => {
-            const levelOrder = { "Beginner": 0, "Intermediate": 1, "Advanced": 2, "Expert": 3 };
-            return levelOrder[a.level] - levelOrder[b.level];
-          });
+          // Add current course if not already included
+          if (!allLevels.find(level => level._id === courseDetails._id)) {
+            allLevels.push({
+              ...courseDetails,
+              features: courseDetails.features || []
+            })
+          }
+
+          // Sort by level difficulty
+          allLevels.sort((a, b) => {
+            const order = { "Beginner": 0, "Intermediate": 1, "Advanced": 2, "Expert": 3 }
+            return order[a.level] - order[b.level]
+          })
           
-          setRelatedCourseLevels(allLevels);
+          setAvailableLevels(allLevels)
           
           // Create course level data with default descriptions and features
           const formattedLevels = allLevels.map((course) => ({
             title: course.level,
             subtitle: defaultLevelData[course.level]?.subtitle || `${course.courseName} - ${course.level} Level`,
-            price: course.price,
+            price: getLevelPrice(course.level),
             duration: course.duration || "8 weeks",
             lessons: course.courseContent?.reduce((total, section) => 
               total + (section.subSection?.length || 0), 0) || 0,
-            features: course.whatYouWillLearn ? 
-              typeof course.whatYouWillLearn === 'string' ? 
-                course.whatYouWillLearn.split(',').map(item => item.trim()) :
-                course.whatYouWillLearn :
-              defaultLevelData[course.level]?.features || [],
+            features: course.features || 
+              (course.whatYouWillLearn ? 
+                typeof course.whatYouWillLearn === 'string' ? 
+                  course.whatYouWillLearn.split(',').map(item => item.trim()) :
+                  course.whatYouWillLearn :
+                defaultLevelData[course.level]?.features || []),
             _id: course._id,
             courseContent: course.courseContent || [],
             thumbnail: course.thumbnail,
             Educator: course.Educator,
-            ratingAndReviews: course.ratingAndReviews || []
-          }));
+            ratingAndReviews: course.ratingAndReviews || [],
+            level: course.level
+          }))
           
-          setCourseLevels(formattedLevels);
+          setCourseLevels(formattedLevels)
           
           // Find index of current course
-          const currentIndex = allLevels.findIndex(course => course._id === courseId);
-          setSelectedLevel(currentIndex !== -1 ? currentIndex : 0);
+          const currentIndex = allLevels.findIndex(course => course._id === courseId)
+          setSelectedLevel(currentIndex !== -1 ? currentIndex : 0)
         }
       } catch (error) {
-        console.log("Could not fetch Course Details", error)
+        console.error("Error fetching course details:", error)
         toast.error("Error loading course details")
+      } finally {
+        setIsLoading(false)
       }
-    })()
+    }
+
+    if (courseId) {
+      fetchDetails()
+    }
   }, [courseId, token])
 
   // console.log("response: ", response)
@@ -182,14 +244,14 @@ function CourseDetails() {
     setTotalNoOfLectures(lectures)
   }, [response])
 
-  if (loading || !response) {
+  if (isLoading) {
     return (
       <div className="grid min-h-[calc(100vh-3.5rem)] place-items-center">
         <div className="spinner"></div>
       </div>
     )
   }
-  if (!response.success) {
+  if (!response) {
     return <Error />
   }
 
@@ -286,18 +348,28 @@ function CourseDetails() {
 
             {/* Video Preview */}
             <div className="mb-8 relative w-full aspect-video rounded-lg overflow-hidden">
-              {console.log("Video URL:", response?.data?.courseDetails?.introVideo)}
+              {response?.data?.courseDetails?.introVideo ? (
                     <Player 
                       playsInline 
-                poster={thumbnail}
-                src={response?.data?.courseDetails?.introVideo}
-                className="rounded-lg w-full h-full object-cover"
-                fluid={true}
-                aspectRatio="auto"
+                  poster={thumbnail}
+                  src={response.data.courseDetails.introVideo}
+                  className="rounded-lg w-full h-full object-cover"
+                  fluid={true}
+                  aspectRatio="auto"
                     >
                       <BigPlayButton position="center" />
                     </Player>
-                  </div>
+              ) : (
+                <div className={`w-full h-full flex items-center justify-center ${
+                  isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
+                }`}>
+                  <p className="text-center">
+                    <BiInfoCircle className="w-8 h-8 mx-auto mb-2" />
+                    No preview video available
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Course Stats */}
             <div className="flex items-center gap-6 mb-8">
@@ -432,79 +504,55 @@ function CourseDetails() {
 
               {/* Skill Level Navigation */}
               <div className={`flex mb-8 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg overflow-hidden`}>
-                {courseLevels.map((level, index) => (
-                  <button
-                    key={index}
-                    className={`flex-1 py-3 px-4 text-center transition-colors ${
-                      index === selectedLevel
-                        ? isDarkMode ? 'bg-gray-700 shadow-md' : 'bg-white shadow-md'
-                        : isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
-                    }`}
-                    onClick={() => setSelectedLevel(index)}
-                  >
-                    {level.title}
-                  </button>
-                ))}
+                {!loading && availableLevels.length > 0 && (
+                  availableLevels.map((level, index) => (
+                    <button
+                      key={level._id}
+                      onClick={() => setSelectedLevel(index)}
+                      className={`flex-1 py-3 px-4 text-center transition-colors ${
+                        index === selectedLevel
+                          ? isDarkMode ? 'bg-gray-700 shadow-md' : 'bg-white shadow-md'
+                          : isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                      }`}
+                    >
+                      {level.level || level.title}
+                    </button>
+                  ))
+                )}
               </div>
 
               {/* Course Level Details */}
-              {courseLevels[selectedLevel] && (
+              {!loading && availableLevels.length > 0 && selectedLevel !== null && availableLevels[selectedLevel] && (
                 <div className={`grid md:grid-cols-2 gap-8 ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-50'} rounded-lg p-8 mb-8`}>
                   {/* Left Column - Course Details */}
                   <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
                     <h3 className="text-2xl font-bold mb-2">
-                      {courseLevels[selectedLevel].title === "Beginner" 
-                        ? `${courseName} for Beginners`
-                        : courseLevels[selectedLevel].title === "Intermediate"
-                        ? `Intermediate ${courseName}`
-                        : courseLevels[selectedLevel].title === "Advanced"
-                        ? `Advanced ${courseName}`
-                        : `${courseName} Expert Specialization`}
+                      {`${courseName} ${availableLevels[selectedLevel]?.level} Level`}
                     </h3>
                     <p className="text-lg mb-6">
-                      {selectedLevel === 0 
-                        ? `Perfect for those with no prior ${courseName} experience. Learn fundamentals, basic syntax, and start building simple applications.`
-                        : selectedLevel === 1
-                        ? `For those with basic ${courseName} knowledge. Deepen your skills and learn more advanced concepts.`
-                        : selectedLevel === 2
-                        ? `For experienced programmers. Master complex ${courseName} concepts and build sophisticated applications.`
-                        : `For professional developers seeking mastery. Focus on specialized domains and cutting-edge ${courseName} applications.`}
+                      {getLevelInfo(availableLevels[selectedLevel]?.level, courseName).description}
                     </p>
-                    <div className="grid gap-4 mb-6">
-                      {courseLevels[selectedLevel].features.map((feature, index) => (
-                        <div key={index} className="flex items-start gap-3">
-                          <Check className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
-                          <span>{feature}</span>
-                        </div>
-                      ))}
-                    </div>
                     <div className="flex items-center gap-8 mb-4">
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Duration</p>
                         <p className="font-semibold">
-                          {selectedLevel === 0 ? "20hr 30m" :
-                           selectedLevel === 1 ? "35hr 45m" :
-                           selectedLevel === 2 ? "60hr 40m" :
-                           "90hr 20m"}
+                          {getLevelInfo(availableLevels[selectedLevel]?.level, courseName).duration}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Lessons</p>
                         <p className="font-semibold">
-                          {selectedLevel === 0 ? "28" :
-                           selectedLevel === 1 ? "42" :
-                           selectedLevel === 2 ? "84" :
-                           "120"} Lessons
+                          {getLevelInfo(availableLevels[selectedLevel]?.level, courseName).lessons}
                         </p>
                       </div>
                     </div>
                     <div className={`inline-block px-3 py-1 rounded-full text-sm ${
-                      selectedLevel === 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
-                      selectedLevel === 1 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
-                      selectedLevel === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' :
+                      availableLevels[selectedLevel]?.level === "Beginner" ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                      availableLevels[selectedLevel]?.level === "Intermediate" ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
+                      availableLevels[selectedLevel]?.level === "Advanced" ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' :
                       'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
                     }`}>
-                      {courseLevels[selectedLevel].title}
+                      {availableLevels[selectedLevel]?.level}
                     </div>
                   </div>
 
@@ -562,13 +610,13 @@ function CourseDetails() {
                     <button
                       onClick={handleBuyCourse}
                       className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
-                        selectedLevel === 0 ? 'bg-blue-600 hover:bg-blue-700' :
-                        selectedLevel === 1 ? 'bg-green-600 hover:bg-green-700' :
-                        selectedLevel === 2 ? 'bg-orange-600 hover:bg-orange-700' :
+                        availableLevels[selectedLevel]?.level === "Beginner" ? 'bg-blue-600 hover:bg-blue-700' :
+                        availableLevels[selectedLevel]?.level === "Intermediate" ? 'bg-green-600 hover:bg-green-700' :
+                        availableLevels[selectedLevel]?.level === "Advanced" ? 'bg-orange-600 hover:bg-orange-700' :
                         'bg-purple-600 hover:bg-purple-700'
                       }`}
                     >
-                      Enroll Now - ₹{courseLevels[selectedLevel].price}
+                      Enroll Now - ₹{getLevelPrice(availableLevels[selectedLevel]?.level)}
                     </button>
                   </div>
                 </div>

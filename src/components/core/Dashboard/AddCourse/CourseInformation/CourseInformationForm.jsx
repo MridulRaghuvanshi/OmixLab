@@ -48,7 +48,6 @@ export default function CourseInformationForm() {
       // console.log("data populated", editCourse)
       setValue("courseTitle", course.courseName)
       setValue("courseShortDesc", course.courseDescription)
-      setValue("coursePrice", course.price)
       setValue("courseTags", course.tag)
       setValue("courseBenefits", course.whatYouWillLearn)
       setValue("courseCategory", course.category)
@@ -56,14 +55,16 @@ export default function CourseInformationForm() {
       setValue("courseImage", course.thumbnail)
       setValue("introVideo", course.introVideo)
       setValue("courseLevel", course.level)
-      // Set initial price based on level
+      // Set price based on level
       const levelPrices = {
         "Beginner": "499",
         "Intermediate": "999",
         "Advanced": "1499",
         "Expert": "2499"
       }
-      setCoursePrice(levelPrices[course.level] || "499")
+      const price = levelPrices[course.level] || "499"
+      setCoursePrice(price)
+      setValue("coursePrice", price)
     }
     getCategories()
 
@@ -79,8 +80,9 @@ export default function CourseInformationForm() {
       "Advanced": "1499",
       "Expert": "2499"
     }
-    setCoursePrice(levelPrices[level])
-    setValue("coursePrice", levelPrices[level])
+    const price = levelPrices[level]
+    setCoursePrice(price)
+    setValue("coursePrice", price)
   }
 
   const isFormUpdated = () => {
@@ -230,7 +232,7 @@ export default function CourseInformationForm() {
           </span>
         )}
       </div>
-      {/* Course Level - Moved before price */}
+      {/* Course Level */}
       <div className="flex flex-col space-y-2">
         <label className="text-sm text-black" htmlFor="courseLevel">
           Course Level <sup className="text-pink-200">*</sup>
@@ -273,10 +275,10 @@ export default function CourseInformationForm() {
                 value: /^(0|[1-9]\d*)(\.\d+)?$/,
               },
             })}
-            className="form-style w-full !pl-12 border-gray-300 text-black dark:text-white"
+            className="form-style w-full !pl-12"
             style={{ backgroundColor: 'transparent' }}
           />
-          <HiOutlineCurrencyRupee className="absolute left-3 top-1/2 inline-block -translate-y-1/2 text-2xl text-black dark:text-white" />
+          <HiOutlineCurrencyRupee className="absolute left-3 top-1/2 inline-block -translate-y-1/2 text-2xl text-black" />
         </div>
         {errors.coursePrice && (
           <span className="ml-2 text-xs tracking-wide text-pink-200">

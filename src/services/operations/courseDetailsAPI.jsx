@@ -43,7 +43,6 @@ export const getAllCourses = async () => {
 
 export const fetchCourseDetails = async (courseId) => {
   const toastId = toast.loading("Loading...")
-  //   dispatch(setLoading(true));
   let result = null
   try {
     const response = await apiConnector("POST", COURSE_DETAILS_API, {
@@ -54,14 +53,31 @@ export const fetchCourseDetails = async (courseId) => {
     if (!response.data.success) {
       throw new Error(response.data.message)
     }
-    result = response.data
+    
+    // Extract course details and ensure video URL is properly set
+    const courseDetails = response.data.data?.courseDetails
+    if (courseDetails) {
+      // Ensure introVideo is properly extracted
+      result = {
+        success: true,
+        data: {
+          courseDetails: {
+            ...courseDetails,
+            introVideo: courseDetails.introVideo || null
+          }
+        }
+      }
+    } else {
+      throw new Error("Course details not found")
+    }
   } catch (error) {
     console.log("COURSE_DETAILS_API API ERROR............", error)
-    result = error.response.data
-    // toast.error(error.response.data.message);
+    result = {
+      success: false,
+      message: error.message || "Failed to fetch course details"
+    }
   }
   toast.dismiss(toastId)
-  //   dispatch(setLoading(false));
   return result
 }
 
@@ -408,32 +424,51 @@ export const fetchRelatedCourseLevels = async (courseName, educatorId, currentCo
         currentCourseId
       },
       {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
       }
     );
-
-    console.log("FETCH_RELATED_COURSES_API RESPONSE............", response);
 
     if (!response?.data?.success) {
       throw new Error(response?.data?.message || "Could not fetch related courses");
     }
 
+    // Get all levels from the response
+    const levels = response.data.data || [];
+
     // Sort levels by difficulty
-    const sortedLevels = response.data.data.sort((a, b) => {
+    const sortedLevels = levels.sort((a, b) => {
       const order = { "Beginner": 0, "Intermediate": 1, "Advanced": 2, "Expert": 3 };
       return order[a.level] - order[b.level];
     });
 
-    return sortedLevels;
-  } catch (error) {
-    console.log("FETCH_RELATED_COURSES_API ERROR............", error);
-    if (error?.response?.status === 401) {
-      toast.error("Please login to view related courses");
+    // Ensure all required fields exist and remove duplicates
+    const uniqueLevels = sortedLevels.reduce((acc, current) => {
+      if (!current?.level || !current?.courseName || !current?.Educator?._id || !current?._id || !current?.price) {
+        return acc;
+      }
+
+      const exists = acc.find(item => item.level === current.level);
+      if (!exists) {
+        // Add default features if not present
+        return [...acc, {
+          ...current,
+          features: current.features || []
+        }];
+      }
+      return acc;
+    }, []);
+
+    if (uniqueLevels.length > 0) {
+      toast.success(`Found ${uniqueLevels.length} course levels`);
     } else {
-      toast.error(error?.response?.data?.message || "Error fetching related courses");
+      toast.info("No additional course levels found");
     }
-    return null;
+    return uniqueLevels;
+
+  } catch (error) {
+    console.error("FETCH_RELATED_COURSES_API ERROR:", error);
+    toast.error("Failed to fetch related course levels");
+    return [];
   } finally {
     toast.dismiss(toastId);
   }
