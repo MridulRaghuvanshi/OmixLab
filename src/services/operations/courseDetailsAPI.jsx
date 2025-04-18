@@ -413,6 +413,12 @@ export const createRating = async (data, token) => {
 
 // Fetch related course levels by the same educator
 export const fetchRelatedCourseLevels = async (courseName, educatorId, currentCourseId, token) => {
+  // If no token is provided, show login message
+  if (!token) {
+    toast.error("Please login first");
+    return [];
+  }
+
   const toastId = toast.loading("Loading related levels...");
   try {
     const response = await apiConnector(
@@ -460,14 +466,15 @@ export const fetchRelatedCourseLevels = async (courseName, educatorId, currentCo
 
     if (uniqueLevels.length > 0) {
       toast.success(`Found ${uniqueLevels.length} course levels`);
-    } else {
-      toast.info("No additional course levels found");
     }
     return uniqueLevels;
 
   } catch (error) {
     console.error("FETCH_RELATED_COURSES_API ERROR:", error);
-    toast.error("Failed to fetch related course levels");
+    // Show error toast only when logged in
+    if (token) {
+      toast.error("Failed to fetch related course levels");
+    }
     return [];
   } finally {
     toast.dismiss(toastId);
