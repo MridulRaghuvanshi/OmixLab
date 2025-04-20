@@ -8,6 +8,7 @@ const coursesSchema = new mongoose.Schema({
 		trim: true,
 	},
 	courseDescription: {
+		
 		type: String,
 		required: true,
 		trim: true,
@@ -73,7 +74,7 @@ const coursesSchema = new mongoose.Schema({
 		type: Date,
 		default: Date.now
 	},
-});
+},);
 
 // Export the Courses model
 module.exports = mongoose.model("Course", coursesSchema);

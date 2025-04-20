@@ -282,11 +282,43 @@ function CourseDetails() {
       return;
     }
 
+    if (selectedLevel === null || !courseLevels[selectedLevel]) {
+      toast.error("Please select a course level");
+      return;
+    }
+
     try {
       const selectedCourseLevel = courseLevels[selectedLevel];
-      if (!selectedCourseLevel) {
-        throw new Error("Selected course level not found");
+      
+      // Validate the selected level
+      if (!selectedCourseLevel.level || !['Beginner', 'Intermediate', 'Advanced', 'Expert'].includes(selectedCourseLevel.level)) {
+        throw new Error("Invalid course level selected");
       }
+
+      // Validate course ID
+      if (!selectedCourseLevel._id) {
+        throw new Error("Invalid course selected");
+      }
+
+      // Validate price
+      if (!selectedCourseLevel.price || selectedCourseLevel.price <= 0) {
+        throw new Error("Invalid course price");
+      }
+
+      // Check if user already has access to this level
+      if (user.subscriptionLevel) {
+        const levelValues = { 'Beginner': 1, 'Intermediate': 2, 'Advanced': 3, 'Expert': 4 };
+        if (levelValues[user.subscriptionLevel] >= levelValues[selectedCourseLevel.level]) {
+          toast.error("You already have access to this course level");
+          return;
+        }
+      }
+
+      console.log("Initiating purchase for:", {
+        courseId: selectedCourseLevel._id,
+        level: selectedCourseLevel.level,
+        price: selectedCourseLevel.price
+      });
       
       await buyCourse(
         token, 
@@ -294,11 +326,12 @@ function CourseDetails() {
         user, 
         navigate, 
         dispatch, 
-        selectedCourseLevel.price
+        selectedCourseLevel.price,
+        selectedCourseLevel.level
       );
     } catch (error) {
       console.error("Error in handleBuyCourse:", error);
-      toast.error("Failed to process purchase. Please try again.");
+      toast.error(error.message || "Failed to process purchase. Please try again.");
     }
   };
 

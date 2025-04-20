@@ -2,8 +2,7 @@ import { useEffect, useState } from "react"
 import { useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { useTheme } from "../../../context/ThemeContext"
-import { apiConnector } from "../../../services/apiconnector"
-import { courseEndpoints } from "../../../services/apis"
+import { getUserEnrolledCourses } from "../../../services/operations/profileAPI"
 
 export default function EnrolledCourses() {
   const { isDarkMode } = useTheme()
@@ -13,29 +12,34 @@ export default function EnrolledCourses() {
   const [loading, setLoading] = useState(true)
   const { user } = useSelector((state) => state.profile)
 
+  // Helper function to check if user has access to course level
+  const hasAccessToLevel = (courseLevel) => {
+    const levelHierarchy = {
+      'Beginner': 0,
+      'Intermediate': 1,
+      'Advanced': 2,
+      'Expert': 3
+    }
+
+    const userLevel = user?.subscriptionLevel || 'Beginner'
+    return levelHierarchy[courseLevel] <= levelHierarchy[userLevel]
+  }
+
   useEffect(() => {
     const fetchEnrolledCourses = async () => {
       try {
-        const response = await apiConnector(
-          "GET",
-          courseEndpoints.GET_ALL_COURSE_API,
-          null,
-          {
-            Authorization: `Bearer ${token}`,
-          }
-        )
-
-        if (response.data.success) {
-          setEnrolledCourses(response.data.data)
-        }
+        const courses = await getUserEnrolledCourses(token)
+        // Filter courses based on user's subscription level
+        const filteredCourses = courses.filter(course => hasAccessToLevel(course.level))
+        setEnrolledCourses(filteredCourses)
       } catch (error) {
-        console.log("Could not fetch enrolled courses.")
+        console.log("Could not fetch enrolled courses:", error)
       }
       setLoading(false)
     }
 
     fetchEnrolledCourses()
-  }, [token])
+  }, [token, user?.subscriptionLevel])
 
   if (loading) {
     return (
@@ -77,14 +81,14 @@ export default function EnrolledCourses() {
           <h2 className={`text-xl font-semibold mb-4 ${
             isDarkMode ? "text-white" : "text-gray-900"
           }`}>
-            Available Courses
+            Enrolled Courses
           </h2>
           {enrolledCourses.length === 0 ? (
             <p className={`text-lg ${
               isDarkMode ? "text-gray-400" : "text-gray-600"
             }`}>
               {user?.subscription 
-                ? "No courses available for your subscription level yet."
+                ? "You haven't enrolled in any courses for your subscription level yet."
                 : "Subscribe to a plan to access courses."}
             </p>
           ) : (

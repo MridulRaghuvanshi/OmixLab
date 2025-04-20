@@ -57,7 +57,7 @@ const Podcasts = () => {
             setRetryCount(prev => prev + 1);
           }, 1000 * (retryCount + 1));
         } else {
-          toast.error("Failed to load user data. Please try again later.");
+          toast.error("Fail to load user data. Please try again later.");
         }
       } finally {
         setIsLoading(false);
@@ -273,7 +273,10 @@ const Podcasts = () => {
             const verifyData = {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature
+              razorpay_signature: response.razorpay_signature,
+              // amount: 100,
+              courses:'poadcast_plan_subscribe',
+              purchasedLevel: user._id
             };
 
             const verifyResponse = await apiConnector(
