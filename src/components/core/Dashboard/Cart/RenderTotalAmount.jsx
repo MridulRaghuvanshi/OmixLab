@@ -20,7 +20,21 @@ export default function RenderTotalAmount() {
       return;
     }
     const courses = cart.map((course) => course._id);
-    buyCourse(token, courses, user, navigate, dispatch, total);
+    
+    // Get the highest level from the cart
+    const levelValues = { 'Beginner': 1, 'Intermediate': 2, 'Advanced': 3, 'Expert': 4 };
+    const highestLevel = cart.reduce((highest, course) => {
+      // Skip if course level is invalid
+      if (!course.level || !levelValues[course.level]) {
+        console.error("Invalid course level found in cart:", course.level);
+        return highest;
+      }
+      return levelValues[course.level] > levelValues[highest] ? course.level : highest;
+    }, 'Beginner');
+    
+    console.log("Highest level determined:", highestLevel);
+    
+    buyCourse(token, courses, user, navigate, dispatch, total, highestLevel);
   }
 
   return (

@@ -320,14 +320,18 @@ function CourseDetails() {
         price: selectedCourseLevel.price
       });
       
+      // Ensure we're using the correct course ID and level
+      const courseId = selectedCourseLevel._id || course_id;
+      const level = selectedCourseLevel.level;
+      
       await buyCourse(
         token, 
-        [selectedCourseLevel._id], 
+        [courseId],
         user, 
         navigate, 
         dispatch, 
         selectedCourseLevel.price,
-        selectedCourseLevel.level
+        level // Pass the level explicitly
       );
     } catch (error) {
       console.error("Error in handleBuyCourse:", error);

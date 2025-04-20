@@ -27,6 +27,33 @@ exports.capturePayment = async (req, res) => {
 
     const userId = req.user.id;
 
+    // Validate course IDs and check if courses exist
+    for (const courseId of courses) {
+      if (!mongoose.Types.ObjectId.isValid(courseId)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid course ID format: ${courseId}`,
+        });
+      }
+
+      // Check if course exists
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return res.status(404).json({
+          success: false,
+          message: `Course not found: ${courseId}`,
+        });
+      }
+
+      // Check if course is published
+      if (course.status !== "Published") {
+        return res.status(400).json({
+          success: false,
+          message: `Course is not available for purchase: ${course.courseName}`,
+        });
+      }
+    }
+
     // Validate Razorpay instance
     if (!instance) {
       throw new Error("Razorpay instance not initialized");
@@ -135,15 +162,33 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    // Validate course IDs
+    // Pre-validate all course IDs before proceeding
+    const invalidCourseIds = [];
+    const nonExistentCourseIds = [];
+    
     for (const courseId of courses) {
       if (!mongoose.Types.ObjectId.isValid(courseId)) {
-        console.error("Invalid course ID:", courseId);
-        return res.status(400).json({
-          success: false,
-          message: `Invalid course ID format: ${courseId}`
-        });
+        invalidCourseIds.push(courseId);
+      } else {
+        const courseExists = await Course.exists({ _id: courseId });
+        if (!courseExists) {
+          nonExistentCourseIds.push(courseId);
+        }
       }
+    }
+
+    if (invalidCourseIds.length > 0 || nonExistentCourseIds.length > 0) {
+      const errorDetails = {
+        invalidCourseIds,
+        nonExistentCourseIds,
+        totalCourses: courses.length
+      };
+      console.error("Course validation failed:", errorDetails);
+      return res.status(400).json({
+        success: false,
+        message: "Course validation failed",
+        details: errorDetails
+      });
     }
 
     // Validate amount
@@ -247,6 +292,18 @@ exports.verifyPayment = async (req, res) => {
       }
     };
 
+    // Validate purchased level first
+    if (!purchasedLevel || !levelHierarchy[purchasedLevel]) {
+      console.error("Invalid purchased level:", {
+        receivedLevel: purchasedLevel,
+        validLevels: Object.keys(levelHierarchy)
+      });
+      return res.status(400).json({
+        success: false,
+        message: `Invalid course level specified. Must be one of: ${Object.keys(levelHierarchy).join(', ')}`
+      });
+    }
+
     const enrollmentResults = [];
     for (const courseId of courses) {
       try {
@@ -259,8 +316,22 @@ exports.verifyPayment = async (req, res) => {
         // Get the main course with explicit error handling
         let mainCourse;
         try {
-          mainCourse = await Course.findById(courseId).lean();
+          mainCourse = await Course.findOne({
+            _id: courseId,
+            status: "Published"
+          }).lean();
+          
           console.log("Database query for course completed");
+          console.log("Course details:", {
+            id: courseId,
+            found: !!mainCourse,
+            details: mainCourse ? {
+              name: mainCourse.courseName,
+              level: mainCourse.level,
+              educator: mainCourse.Educator,
+              status: mainCourse.status
+            } : null
+          });
         } catch (dbError) {
           console.error("Database error finding course:", {
             courseId,
@@ -275,11 +346,29 @@ exports.verifyPayment = async (req, res) => {
         }
 
         if (!mainCourse) {
-          console.error("Course not found in database:", courseId);
+          console.error("Course not found in database or not published:", {
+            courseId,
+            error: "Course does not exist or is not published"
+          });
           enrollmentResults.push({
             courseId,
             success: false,
-            message: "Course not found in database"
+            message: "Course not found or not published"
+          });
+          continue;
+        }
+
+        // Validate course level
+        if (!mainCourse.level || !levelHierarchy[mainCourse.level]) {
+          console.error("Invalid course level in database:", {
+            courseId,
+            level: mainCourse.level,
+            validLevels: Object.keys(levelHierarchy)
+          });
+          enrollmentResults.push({
+            courseId,
+            success: false,
+            message: "Course has invalid level in database"
           });
           continue;
         }
@@ -292,12 +381,11 @@ exports.verifyPayment = async (req, res) => {
         });
 
         // Validate course has required fields
-        if (!mainCourse.courseName || !mainCourse.Educator || !mainCourse.level) {
+        if (!mainCourse.courseName || !mainCourse.Educator) {
           console.error("Course missing required fields:", {
             id: mainCourse._id,
             hasName: !!mainCourse.courseName,
-            hasEducator: !!mainCourse.Educator,
-            hasLevel: !!mainCourse.level
+            hasEducator: !!mainCourse.Educator
           });
           enrollmentResults.push({
             courseId,
@@ -310,20 +398,40 @@ exports.verifyPayment = async (req, res) => {
         // Find all course levels with explicit error handling
         let allCourseLevels;
         try {
-          allCourseLevels = await Course.find({
+          // Then find all related course levels
+          const query = {
             courseName: mainCourse.courseName,
             Educator: mainCourse.Educator,
+            status: "Published",
             level: { $in: levelHierarchy[purchasedLevel].access }
-          }).lean();
+          };
+          
+          console.log("Finding course levels with query:", query);
+          
+          allCourseLevels = await Course.find(query).lean();
           
           console.log("Found course levels:", {
             count: allCourseLevels.length,
             levels: allCourseLevels.map(c => ({
               id: c._id.toString(),
               name: c.courseName,
-              level: c.level
+              level: c.level,
+              status: c.status,
+              educator: c.Educator
             }))
           });
+
+          // If no course levels found, try finding just the main course
+          if (allCourseLevels.length === 0) {
+            console.log("No related levels found, checking main course level access");
+            if (levelHierarchy[purchasedLevel].access.includes(mainCourse.level)) {
+              allCourseLevels = [mainCourse];
+              console.log("Using main course as it matches level access:", {
+                courseId: mainCourse._id,
+                level: mainCourse.level
+              });
+            }
+          }
         } catch (dbError) {
           console.error("Database error finding course levels:", {
             courseId,
@@ -365,7 +473,13 @@ exports.verifyPayment = async (req, res) => {
 
         if (existingEnrollments.length > 0) {
           const currentHighestLevel = Math.max(...existingEnrollments.map(
-            course => levelHierarchy[course.level].value
+            course => {
+              if (!course.level || !levelHierarchy[course.level]) {
+                console.log("Invalid course level found:", course.level);
+                return 0;
+              }
+              return levelHierarchy[course.level].value;
+            }
           ));
 
           if (levelHierarchy[purchasedLevel].value <= currentHighestLevel) {
@@ -384,7 +498,9 @@ exports.verifyPayment = async (req, res) => {
         }
 
         // Update user's subscription level if purchasing a higher level
-        const currentLevel = user.subscriptionLevel ? levelHierarchy[user.subscriptionLevel].value : 0;
+        const currentLevel = user.subscriptionLevel && levelHierarchy[user.subscriptionLevel] 
+          ? levelHierarchy[user.subscriptionLevel].value 
+          : 0;
         const purchasedLevelValue = levelHierarchy[purchasedLevel].value;
 
         if (purchasedLevelValue > currentLevel) {
@@ -405,6 +521,15 @@ exports.verifyPayment = async (req, res) => {
           // Skip if already enrolled in this specific level
           if (courseLevelDoc.studentsEnrolled.includes(userId)) {
             console.log("Already enrolled in level:", {
+              courseId: courseLevelDoc._id,
+              level: courseLevelDoc.level
+            });
+            continue;
+          }
+
+          // Skip if course level is invalid
+          if (!courseLevelDoc.level || !levelHierarchy[courseLevelDoc.level]) {
+            console.error("Invalid course level found during enrollment:", {
               courseId: courseLevelDoc._id,
               level: courseLevelDoc.level
             });
